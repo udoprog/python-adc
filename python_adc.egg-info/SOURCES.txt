@@ -1,0 +1,9 @@
+setup.cfg
+setup.py
+python_adc.egg-info/PKG-INFO
+python_adc.egg-info/SOURCES.txt
+python_adc.egg-info/dependency_links.txt
+python_adc.egg-info/entry_points.txt
+python_adc.egg-info/top_level.txt
+python_adc.egg-info/zip-safe
+adc/__init__.py
