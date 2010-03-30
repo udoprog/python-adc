@@ -3,7 +3,7 @@ import sys, os
 
 version = '0.1'
 
-setup(name='python-adc',
+setup(name='adc',
       version=version,
       description="A complete ADC (Advanced DC) client library for python",
       long_description="""\
