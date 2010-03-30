@@ -31,3 +31,9 @@ The following is an example usage of the parser:
 The distribution contains testing code, after installing, run:
 
     python -m adc.parser_tests
+
+To run all available tests, type:
+
+    python -m adc.all_tests
+
+Congratulations
