@@ -3,7 +3,7 @@ import string
 from pyparsing import *
 
 """
-The following module is a parser based on the ADC specifiction version 1.0:
+The following module is a parser based on the ADC specification version 1.0:
 http://adc.sourceforge.net/ADC.html
 """
 
