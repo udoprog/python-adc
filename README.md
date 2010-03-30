@@ -15,9 +15,19 @@ effective communication.
 The following is an example usage of the parser:
 
     from adc import ADCParser
-    
+    import sys
+
     try:
-        frame = ADCParser.parseString("FART AAAA\n");
-    except e:
+        frame = ADCParser.parseString("FART AAAA +TEST\n");
+    except Exception, e:
         print e;
         sys.exit(0);
+
+    print repr(frame.header)        # -> <adc.parser.ADC_FMessageHeader instance at 0xXXXXXXXX>
+    print frame.header.command_name # -> ART
+    print frame.header.my_sid       # -> AAAA
+    print frame.header.features     # -> {'+': ["test"], '-': []}
+
+The distribution contains testing code, after installing, run:
+
+    python -m adc.parser_tests
