@@ -2,6 +2,11 @@ import string
 
 from pyparsing import *
 
+"""
+The following module is a parser based on the ADC specifiction version 1.0:
+http://adc.sourceforge.net/ADC.html
+"""
+
 class ADCParser:
     """
     A pyparser parsing with all methods encapsulated as static fields in this class.
