@@ -7,6 +7,55 @@ The following module is a parser based on the ADC specification version 1.0:
 http://adc.sourceforge.net/ADC.html
 """
 
+import base64
+import IPy
+
+def decode_type(s, pos, toc):
+    a_type, a_key, a_val = toc;
+    
+    if a_type == ADCParser.TYPE_STR:
+        return a_key, a_val;
+    elif a_type == ADCParser.TYPE_INT:
+        return a_key, int(a_val);
+    elif a_type == ADCParser.TYPE_B32:
+        return a_key, Base32(base64.b32decode(a_val));
+    elif a_type == ADCParser.TYPE_IP4:
+        return a_key, IPy.IP(a_val, ipversion=4);
+    elif a_type == ADCParser.TYPE_IP6:
+        return a_key, IPy.IP(a_val, ipversion=6);
+    
+    return None;
+
+def encode_type(k, v):
+    if type(v) == int:
+        print ADCParser.TYPE_INT + ADCParser.TYPE_SEP + str(v);
+    elif type(v) == IPy.IP:
+        if v.version == 4:
+            return ADCParser.TYPE_IP4 + ADCParser.TYPE_SEP + k + "IP4"
+        elif v.version == 6:
+            return ADCParser.TYPE_IP6 + ADCParser.TYPE_SEP + k + "IP6"
+    elif isinstance(v, basestring):
+        return ADCParser.TYPE_STR + ADCParser.TYPE_SEP + k + v;
+    elif isinstance(v, Base32):
+        return ADCParser.TYPE_B32 + ADCParser.TYPE_SEP + k + base64.b32encode(v.val);
+    
+    raise ValueError("cannot encode type: " + v);
+
+class Base32:
+    """
+    A read only type to indicate that the containing message should be encoded using Base32
+    """
+    def __init__(self, val):
+        self._val = val;
+    
+    val = property(lambda self: self._val);
+    
+    def __str__(self):
+        return self.val;
+    
+    def __repr__(self):
+        return "<Base32 val=" + repr(self.val) + ">"
+    
 class ADCParser:
     """
     A pyparser parsing with all methods encapsulated as static fields in this class.
@@ -17,7 +66,14 @@ class ADCParser:
     FEATURE_ADD="+"
     FEATURE_REM="-"
     SEPARATOR=" "
+    TYPE_SEP=":"
     EOL="\n"
+    
+    TYPE_INT = "INT";
+    TYPE_IP4 = "IP4";
+    TYPE_IP6 = "IP6";
+    TYPE_B32 = "B32";
+    TYPE_STR = "STR";
     
     """
     separator             ::= ' '
@@ -99,7 +155,12 @@ class ADCParser:
     """
     parameter_value       ::= escaped_letter+
     """
-    parameter_value       = Combine(OneOrMore(escaped_letter)).setResultsName('parameter_value')
+    parameter_value       = Combine(OneOrMore(escaped_letter))
+    
+    """
+    parameter_type        ::= 'INT' | 'STR' | 'B32' | 'IP4' | 'IP6'
+    """
+    parameter_type        = (Literal(TYPE_INT) | Literal(TYPE_STR) | Literal(TYPE_B32) | Literal(TYPE_IP4) | Literal(TYPE_IP6))
     
     """
     parameter_name        ::= simple_alpha simple_alphanum
@@ -107,19 +168,10 @@ class ADCParser:
     parameter_name        = Combine(Word(simple_alpha, exact=1) + Word(simple_alphanum, exact=1))
     
     """
-    positional_parameter  ::= parameter_value
-    """
-    positional_parameter  = Combine(~parameter_name + parameter_value)
     
+    named_parameter       ::= parameter_type ':' parameter_name (':' parameter_value)?
     """
-    convenience function for positional parameters
-    """
-    positional_parameters = ZeroOrMore(separator + positional_parameter).setResultsName("positional_parameters")
-    
-    """
-    named_parameter       ::= parameter_name parameter_value?
-    """
-    named_parameter       = (parameter_name + Optional(parameter_value)).setParseAction(lambda s, l, t: (t[0], t[1]))
+    named_parameter       = (parameter_type + Literal(TYPE_SEP).suppress() + parameter_name + Literal(TYPE_SEP).suppress() + parameter_value).setParseAction(decode_type)
     
     """
     convenience function for named_parameters
@@ -170,7 +222,7 @@ class ADCParser:
     message_body          ::= (b_message_header | cih_message_header | de_message_header | f_message_header | u_message_header | message_header)
                               (separator positional_parameter)* (separator named_parameter)*
     """
-    message_body          = (message_header + positional_parameters + named_parameters).setResultsName('message_body');
+    message_body          = (message_header + named_parameters).setResultsName('message_body');
     
     """
     message               ::= message_body? eol
@@ -182,29 +234,27 @@ class ADCParser:
         return Message.create(ADCParser.message.parseString(s, parseAll=True));
 
 class Message:
-  def __init__(self, header=None, *params, **named_params):
+  def __init__(self, header=None, **params):
     self.header = header
-    self.params = list(params)
-    self.named_params = named_params
+    self.params = params
   
   @classmethod
   def create(klass, tree_root):
     if "message_body" in tree_root:
         header = Header.create(tree_root);
-        params = [a for a in tree_root.get('positional_parameters', [])];
-        named_params = tree_root.get('named_parameters', {});
-        return Message(header, *params, **dict(list(named_params)));
+        params = tree_root.get('named_parameters', {});
+        return Message(header, **dict(list(params)));
     else:
         return Message();
   
   def __repr__(self):
-    return "<Message header=" + repr(self.header) + " params=" + repr(self.params) + " named_params=" + repr(self.named_params) + ">"
+    return "<Message header=" + repr(self.header) + " params=" + repr(self.params) + ">"
 
   def __str__(self):
     if self.header is None:
         return "";
     
-    return ADCParser.SEPARATOR.join([self.header.__str__()] + list(self.params) + [v + e for v,e in self.named_params.items()])
+    return ADCParser.SEPARATOR.join([self.header.__str__()] + [encode_type(v,e) for v,e in self.params.items()])
 
 class Header:
   def __init__(self, **kw):
@@ -215,14 +265,16 @@ class Header:
       for v in self.validates:
         if getattr(self, v) is None:
           continue;
-
+        
         try:
-          getattr(ADCParser, v).parseString(getattr(self, v), parseAll=True);
+          val = getattr(self, v);
+          assert isinstance(val, basestring), "value must be of type: basestring";
+          getattr(ADCParser, v).parseString(val, parseAll=True);
         except Exception, e:
-          raise ValueError("argument '" + v + "' is invalid: " + str(e));
+          raise ValueError("argument '" + str(v) + "' is invalid: " + str(e));
     
     if self.type and not self.type in self.types:
-      raise ValueError("type '" + self.type + "' not valid for: " + repr(self));
+      raise ValueError("type " + repr(self.type) + " not valid for: " + repr(self));
   
   def from_tree(self, tree_root):
     self.type = tree_root.get('type', None);

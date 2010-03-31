@@ -19,7 +19,8 @@ setup(name='adc',
       zip_safe=True,
       install_requires=[
           # -*- Extra requirements: -*-
-          "pyparsing"
+          "pyparsing",
+          "ipy"
       ],
       entry_points="""
       # -*- Entry points: -*-
