@@ -69,5 +69,54 @@ Notice how each parameter is of the correct type, if you wish to construct the s
     
     Message(CIHHeader(type='C', command_name='INF'), I4=IP('10.0.0.1', ipversion=4), I6=IP('::ffff', ipversion=6) ID=Base32('FOOBARBAZ'), PD=Base32('FOOBAR'))
 
-Have fun!
+ADC Type declarations
+---
+The following grammar defines the type declaration changes for the ADC protocol:
 
+    separator             ::= ' '
+    eol                   ::= #x0a
+    simple_alphanum       ::= [A-Z0-9]
+    simple_alpha          ::= [A-Z]
+    base32_character      ::= simple_alpha | [2-7]
+    escape                ::= '\'
+    escaped_letter        ::= [^ \#x0a] | escape 's' | escape 'n' | escape escape
+    feature_name          ::= simple_alpha simple_alphanum{3}
+    encoded_sid           ::= base32_character{4}
+    my_sid                ::= encoded_sid
+    encoded_cid           ::= base32_character+
+    my_cid                ::= encoded_cid
+    target_sid            ::= encoded_sid
+    command_name          ::= simple_alpha simple_alphanum simple_alphanum
+    parameter_value       ::= escaped_letter+
+    parameter_type        ::= 'INT' | 'STR' | 'B32' | 'IP4' | 'IP6'
+    parameter_name        ::= simple_alpha simple_alphanum
+    named_parameter       ::= parameter_type ':' parameter_name (':' parameter_value)?
+    b_message_header      ::= 'B' command_name separator my_sid
+    cih_message_header    ::= ('C' | 'I' | 'H') command_name
+    de_message_header     ::= ('D' | 'E') command_name separator my_sid separator target_sid
+    f_message_header      ::= 'F' command_name separator my_sid separator (('+'|'-') feature_name)+
+    u_message_header      ::= 'U' command_name separator my_cid
+    message_body          ::= (b_message_header | cih_message_header | de_message_header | f_message_header | u_message_header | message_header)
+                              (separator positional_parameter)* (separator named_parameter)*
+    message               ::= message_body? eol
+
+B32
+---
+A B32 type message is a base32 encoded string according to [http://tools.ietf.org/html/rfc4648](IETF RFC4648)
+
+INT
+---
+An INT type message is an integer encoded as a string, matching the following grammar:
+    INT                   ::= '1' [0-9]*
+
+STR
+---
+A string is a raw string taken from the parameter_value, which is encoded as an UTF-8 string
+
+IP4
+---
+IP4 is a valid IPv4 address
+
+IP6
+---
+IP6 is a vald IPv6 address
