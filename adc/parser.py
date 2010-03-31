@@ -12,6 +12,7 @@ class ADCParser:
     A pyparser parsing with all methods encapsulated as static fields in this class.
     """
     ParserElement.setDefaultWhitespaceChars("")
+    ParserElement.enablePackrat();
     
     FEATURE_ADD="+"
     FEATURE_REM="-"
@@ -172,7 +173,7 @@ class ADCParser:
     """
     message               ::= message_body? eol
     """
-    message               = Optional(message_body) + Suppress(eol) + StringEnd();
+    message               = Optional(message_body) + StringEnd();
 
     @classmethod
     def parseString(klass, s):
@@ -193,6 +194,9 @@ class ADC_Message:
     self.header = ADC_MessageHeader.create(tree_root);
     self.params = [a for a in tree_root.get('positional_parameters', [])];
     self.named_params = tree_root.get('named_parameters', []);
+    
+  def __str__(self):
+    return "<ADC_Message header=" + str(self.header) + " params=" + repr(self.params) + " named_params=" + repr(self.named_params) + ">"
 
 class ADC_MessageHeader:
   def __init__(self, tree_root):
@@ -225,15 +229,24 @@ class ADC_BMessageHeader(ADC_MessageHeader):
     ADC_MessageHeader.__init__(self, tree_root);
     self.my_sid = tree_root.get("my_sid");
 
+  def __str__(self):
+    return "<ADC_BMessageHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + " my_sid=" + repr(self.my_sid) + ">"
+
 class ADC_CIHMessageHeader(ADC_MessageHeader):
   def __init__(self, tree_root):
     ADC_MessageHeader.__init__(self, tree_root);
+  
+  def __str__(self):
+    return "<ADC_CIHMessageHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + ">"
 
 class ADC_DEMessageHeader(ADC_MessageHeader):
   def __init__(self, tree_root):
     ADC_MessageHeader.__init__(self, tree_root);
     self.my_sid = tree_root.get("my_sid");
     self.target_sid = tree_root.get("target_sid");
+  
+  def __str__(self):
+    return "<ADC_DEMessageHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + " my_sid=" + repr(self.my_sid) + " target_sid=" + repr(self.target_sid) + ">"
 
 class ADC_FMessageHeader(ADC_MessageHeader):
   def __init__(self, tree_root):
@@ -247,8 +260,22 @@ class ADC_FMessageHeader(ADC_MessageHeader):
     
     for t, f in self.feature_list:
         self.features[t].append(f);
+  
+  def __str__(self):
+    return "<ADC_FMessageHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + " my_sid=" + repr(self.my_sid) + " features=" + repr(self.features) + ">"
 
 class ADC_UMessageHeader(ADC_MessageHeader):
   def __init__(self, tree_root):
     ADC_MessageHeader.__init__(self, tree_root);
     self.my_cid = tree_root.get("my_cid");
+  
+  def __str__(self):
+    return "<ADC_FMessageHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + " my_cid=" + repr(self.my_cid) + ">"
+
+if __name__ == "__main__":
+  import sys
+  if len(sys.argv) < 2:
+    sys.stderr.write("usage: adc.parser <string>");
+    sys.exit(1);
+  
+  sys.stdout.write(str(ADCParser.parseString(sys.argv[1])) + "\n")

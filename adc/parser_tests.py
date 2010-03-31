@@ -28,36 +28,35 @@ class TestParser(unittest.TestCase):
             self.assertEqual(ADCParser.parameter_value.parseString(s[0], parseAll=True)["parameter_value"], s[1])
     
     def test_b_message(self):
-        message = ADCParser.parseString("BART AAAA\n");
+        message = ADCParser.parseString("BART AAAA");
         
         self.assertTrue(isinstance(message.header, ADC_BMessageHeader));
         self.assertEquals(message.header.command_name, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
     
     def test_b_w_arguments(self):
-        message = ADCParser.parseString("BART AAAA foo\\sbar\\sbaz S0Test\n");
-        
+        message = ADCParser.parseString("BART AAAA foo\\sbar\\sbaz S0Test");
         self.assertTrue(isinstance(message.header, ADC_BMessageHeader));
         self.assertEquals(message.header.command_name, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
         self.assertEquals(message.params, ["foo bar baz", "S0Test"]);
     
     def test_f_message(self):
-        message = ADCParser.parseString("FART AAAA +T000 -T002\n");
+        message = ADCParser.parseString("FART AAAA +T000 -T002");
         self.assertTrue(isinstance(message.header, ADC_FMessageHeader));
         self.assertEquals(message.header.command_name, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
         self.assertEquals(message.header.features, {"+": ["T000"], "-": ["T002"]})
     
     def test_de_message(self):
-        message = ADCParser.parseString("DART AAAA BBBB\n");
+        message = ADCParser.parseString("DART AAAA BBBB");
         self.assertTrue(isinstance(message.header, ADC_DEMessageHeader));
         self.assertEquals(message.header.command_name, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
         self.assertEquals(message.header.target_sid, "BBBB")
     
     def test_u_message(self):
-        message = ADCParser.parseString("UART AAAA\n");
+        message = ADCParser.parseString("UART AAAA");
         self.assertTrue(isinstance(message.header, ADC_UMessageHeader));
         self.assertEqual(message.header.my_cid, "AAAA");
 
