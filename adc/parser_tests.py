@@ -39,7 +39,8 @@ class TestParser(unittest.TestCase):
         self.assertTrue(isinstance(message.header, ADC_BMessageHeader));
         self.assertEquals(message.header.command_name, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
-        self.assertEquals(message.params, ["foo bar baz", "S0Test"]);
+        self.assertEquals(message.params, ["foo bar baz"]);
+        self.assertEquals(message.named_params, {'S0': 'Test'});
     
     def test_f_message(self):
         message = ADCParser.parseString("FART AAAA +T000 -T002");
