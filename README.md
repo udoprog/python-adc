@@ -31,7 +31,7 @@ The following is an example usage of the parser:
         print e;
         sys.exit(0);
 
-    print repr(frame.header)        # -> <adc.parser.ADC_FMessageHeader instance at 0xXXXXXXXX>
+    print repr(frame.header)        # -> <adc.parser.FHeader instance at 0xXXXXXXXX>
     print frame.header.command_name # -> ART
     print frame.header.my_sid       # -> AAAA
     print frame.header.features     # -> {'+': ["test"], '-': []}
@@ -47,7 +47,7 @@ To run all available tests, type:
 If you want to play around with the parser, run:
 
     #> python -m adc.parser "FART AAAA +ZLIB +BASE"
-    <ADC_Message header=<ADC_FMessageHeader type='F' command_name='ART' my_sid='AAAA' features={'+': ['ZLIB', 'BASE'], '-': []}> params=[] named_params=[]>
+    <Message header=<FHeader type='F' command_name='ART' my_sid='AAAA' features={'+': ['ZLIB', 'BASE'], '-': []}> params=[] named_params=[]>
 
 Note: the command_name 'ART' does not really exist.
 

@@ -30,13 +30,13 @@ class TestParser(unittest.TestCase):
     def test_b_message(self):
         message = ADCParser.parseString("BART AAAA");
         
-        self.assertTrue(isinstance(message.header, ADC_BMessageHeader));
+        self.assertTrue(isinstance(message.header, BHeader));
         self.assertEquals(message.header.command_name, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
     
     def test_b_w_arguments(self):
         message = ADCParser.parseString("BART AAAA foo\\sbar\\sbaz S0Test");
-        self.assertTrue(isinstance(message.header, ADC_BMessageHeader));
+        self.assertTrue(isinstance(message.header, BHeader));
         self.assertEquals(message.header.command_name, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
         self.assertEquals(message.params, ["foo bar baz"]);
@@ -44,29 +44,29 @@ class TestParser(unittest.TestCase):
     
     def test_f_message(self):
         message = ADCParser.parseString("FART AAAA +T000 -T002");
-        self.assertTrue(isinstance(message.header, ADC_FMessageHeader));
+        self.assertTrue(isinstance(message.header, FHeader));
         self.assertEquals(message.header.command_name, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
         self.assertEquals(message.header.features, {"+": ["T000"], "-": ["T002"]})
     
     def test_de_message(self):
         message = ADCParser.parseString("DART AAAA BBBB");
-        self.assertTrue(isinstance(message.header, ADC_DEMessageHeader));
+        self.assertTrue(isinstance(message.header, DEHeader));
         self.assertEquals(message.header.command_name, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
         self.assertEquals(message.header.target_sid, "BBBB")
     
     def test_u_message(self):
         message = ADCParser.parseString("UART AAAA");
-        self.assertTrue(isinstance(message.header, ADC_UMessageHeader));
+        self.assertTrue(isinstance(message.header, UHeader));
         self.assertEqual(message.header.my_cid, "AAAA");
 
 class TestMessages(unittest.TestCase):
     def test_b_message(self):
-        self.assertEqual(str(ADC_Message(header=ADC_BMessageHeader(my_sid="AAAA", type='B', command_name='ART'))), "BART AAAA")
+        self.assertEqual(str(Message(header=BHeader(my_sid="AAAA", type='B', command_name='ART'))), "BART AAAA")
     
     def test_f_message(self):
-        self.assertEqual(str(ADC_Message(header=ADC_FMessageHeader(my_sid="AAAA", type='F', command_name='ART', features={'+': ["ZLIB"]}))), "FART AAAA +ZLIB")
+        self.assertEqual(str(Message(header=FHeader(my_sid="AAAA", type='F', command_name='ART', features={'+': ["ZLIB"]}))), "FART AAAA +ZLIB")
 
 if __name__ == "__main__":
     unittest.main()
