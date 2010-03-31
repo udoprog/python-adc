@@ -36,16 +36,16 @@ def encode_type(k, v):
     """
     
     if type(v) == int:
-        print ADCParser.TYPE_INT + ADCParser.TYPE_SEP + str(v);
+        print ADCParser.TYPE_INT, k, str(v);
     elif isinstance(v, IP):
         if v.version() == 4:
-            return ADCParser.TYPE_IP4 + ADCParser.TYPE_SEP + k + ADCParser.TYPE_SEP + str(v)
+            return ADCParser.TYPE_IP4, k, str(v)
         elif v.version() == 6:
-            return ADCParser.TYPE_IP6 + ADCParser.TYPE_SEP + k +  ADCParser.TYPE_SEP + str(v)
+            return ADCParser.TYPE_IP6, k, str(v)
     elif isinstance(v, basestring):
-        return ADCParser.TYPE_STR + ADCParser.TYPE_SEP + k + v;
+        return ADCParser.TYPE_STR, k, v;
     elif isinstance(v, Base32):
-        return ADCParser.TYPE_B32 + ADCParser.TYPE_SEP + k + base64.b32encode(v.val);
+        return ADCParser.TYPE_B32, k, base64.b32encode(v.val);
     
     raise ValueError("cannot encode value: " + repr(v));
 
@@ -247,7 +247,7 @@ class Message:
     if self.header is None:
         return "";
     
-    return ADCParser.SEPARATOR.join([self.header.__str__()] + [encode_type(v,e) for v,e in self.params.items()])
+    return ADCParser.SEPARATOR.join([self.header.__str__()] + [ADCParser.TYPE_SEP.join(encode_type(v,e)) for v,e in self.params.items()])
 
 class Header:
   def __init__(self, **kw):

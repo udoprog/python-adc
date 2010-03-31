@@ -12,4 +12,4 @@ try:
 except Exception, e:
     print "bad message parameter: " + str(e)
 
-# -> CINF IP6:I6:::ffff IP4:I4:10.0.0.1 B32:PDIZHU6QSBKI====== B32:IDIZHU6QSBKJBECWQ=
+# -> CINF IP6:I6:::ffff IP4:I4:10.0.0.1 B32:PD:IZHU6QSBKI====== B32:ID:IZHU6QSBKJBECWQ=

@@ -69,10 +69,10 @@ class TestMessages(unittest.TestCase):
         self.assertEqual(str(Message(header=FHeader(my_sid="AAAA", type='F', command_name='ART', features={'+': ["ZLIB"]}))), "FART AAAA +ZLIB")
     
     def test_argument_message(self):
-        self.assertEqual(str(Message(header=BHeader(my_sid="AAAA", type='B', command_name='ART'), TE="TEST")), "BART AAAA STR:TETEST")
-        self.assertEqual(str(Message(header=BHeader(my_sid="AAAA", type='B', command_name='ART'), TE=Base32("TEST"))), "BART AAAA B32:TEKRCVGVA=")
+        self.assertEqual(str(Message(header=BHeader(my_sid="AAAA", type='B', command_name='ART'), TE="TEST")), "BART AAAA STR:TE:TEST")
+        self.assertEqual(str(Message(header=BHeader(my_sid="AAAA", type='B', command_name='ART'), TE=Base32("TEST"))), "BART AAAA B32:TE:KRCVGVA=")
         self.assertEqual(str(Message(header=CIHHeader(type='C', command_name='INF'), I4=IP('10.0.0.1', ipversion=4), I6=IP('::ffff', ipversion=6), ID=Base32('FOOBARBAZ'), PD=Base32('FOOBAR'))), 
-            "CINF IP6:I6:::ffff IP4:I4:10.0.0.1 B32:PDIZHU6QSBKI====== B32:IDIZHU6QSBKJBECWQ=")
+            "CINF IP6:I6:::ffff IP4:I4:10.0.0.1 B32:PD:IZHU6QSBKI====== B32:ID:IZHU6QSBKJBECWQ=")
 
 if __name__ == "__main__":
     unittest.main()

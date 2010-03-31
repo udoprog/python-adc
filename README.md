@@ -74,7 +74,7 @@ Try it out by doing the following INF (also see; example-message.py):
     except Exception, e:
         print "bad message parameter: " + str(e)
     
-    # -> CINF IP6:I6:::ffff IP4:I4:10.0.0.1 B32:PDIZHU6QSBKI====== B32:IDIZHU6QSBKJBECWQ=
+    # -> CINF IP6:I6:::ffff IP4:I4:10.0.0.1 B32:PD:IZHU6QSBKI====== B32:ID:IZHU6QSBKJBECWQ=
 
 Notice how each parameter is of the correct type, if you wish to construct the same message, do this:
 
