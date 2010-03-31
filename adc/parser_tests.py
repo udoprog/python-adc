@@ -61,5 +61,12 @@ class TestParser(unittest.TestCase):
         self.assertTrue(isinstance(message.header, ADC_UMessageHeader));
         self.assertEqual(message.header.my_cid, "AAAA");
 
+class TestMessages(unittest.TestCase):
+    def test_b_message(self):
+        self.assertEqual(str(ADC_Message(header=ADC_BMessageHeader(my_sid="AAAA", type='B', command_name='ART'))), "BART AAAA")
+    
+    def test_f_message(self):
+        self.assertEqual(str(ADC_Message(header=ADC_FMessageHeader(my_sid="AAAA", type='F', command_name='ART', features={'+': ["ZLIB"]}))), "FART AAAA +ZLIB")
+
 if __name__ == "__main__":
     unittest.main()

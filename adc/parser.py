@@ -198,7 +198,7 @@ class ADC_Message:
         return ADC_Message();
     
   def __repr__(self):
-    return "<ADC_Message header=" + str(self.header) + " params=" + repr(self.params) + " named_params=" + repr(self.named_params) + ">"
+    return "<ADC_Message header=" + repr(self.header) + " params=" + repr(self.params) + " named_params=" + repr(self.named_params) + ">"
 
   def __str__(self):
     if self.header is None:
@@ -207,7 +207,24 @@ class ADC_Message:
     return ADCParser.SEPARATOR.join([self.header.__str__()] + list(self.params) + [v + e for v,e in self.named_params.items()])
 
 class ADC_MessageHeader:
-  def __init__(self, tree_root):
+  def __init__(self, **kw):
+    self.type = kw.pop('type', None);
+    self.command_name = kw.pop('command_name', None);    
+    
+    if hasattr(self, 'validates'):
+      for v in self.validates:
+        if getattr(self, v) is None:
+          continue;
+
+        try:
+          getattr(ADCParser, v).parseString(getattr(self, v), parseAll=True);
+        except Exception, e:
+          raise ValueError("argument '" + v + "' is invalid: " + str(e));
+    
+    if self.type and not self.type in self.types:
+      raise ValueError("type '" + self.type + "' not valid for: " + repr(self));
+  
+  def from_tree(self, tree_root):
     self.type = tree_root.get('type', None);
     self.command_name = tree_root.get('command_name', None);
   
@@ -221,27 +238,35 @@ class ADC_MessageHeader:
     header_type = header_type[0];
     
     if header_type in ADCParser.B_HEADER:
-      return ADC_BMessageHeader(tree_root);
+      return ADC_BMessageHeader().from_tree(tree_root);
     
     if header_type in ADCParser.CIH_HEADER:
-      return ADC_CIHMessageHeader(tree_root);
+      return ADC_CIHMessageHeader().from_tree(tree_root);
     
     if header_type in ADCParser.DE_HEADER:
-      return ADC_DEMessageHeader(tree_root);
+      return ADC_DEMessageHeader().from_tree(tree_root);
     
     if header_type in ADCParser.F_HEADER:
-      return ADC_FMessageHeader(tree_root);
+      return ADC_FMessageHeader().from_tree(tree_root);
     
     if header_type in ADCParser.U_HEADER:
-      return ADC_UMessageHeader(tree_root);
+      return ADC_UMessageHeader().from_tree(tree_root);
     
     return None;
 
 class ADC_BMessageHeader(ADC_MessageHeader):
-  def __init__(self, tree_root):
-    ADC_MessageHeader.__init__(self, tree_root);
+  validates = ['command_name', 'my_sid'];
+  types = ADCParser.B_HEADER;
+  
+  def __init__(self, **kw):
+    self.my_sid = kw.pop('my_sid', None);
+    ADC_MessageHeader.__init__(self, **kw);
+  
+  def from_tree(self, tree_root):
+    ADC_MessageHeader.from_tree(self, tree_root);
     self.my_sid = tree_root.get("my_sid");
-
+    return self;
+  
   def __repr__(self):
     return "<ADC_BMessageHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + " my_sid=" + repr(self.my_sid) + ">"
 
@@ -249,8 +274,15 @@ class ADC_BMessageHeader(ADC_MessageHeader):
     return ADCParser.SEPARATOR.join([self.type + self.command_name, self.my_sid]);
 
 class ADC_CIHMessageHeader(ADC_MessageHeader):
+  validates = ['command_name'];
+  types = ADCParser.CIH_HEADER;
+  
+  def __init__(self, **kw):
+    ADC_MessageHeader.__init__(self, **kw);
+  
   def __init__(self, tree_root):
-    ADC_MessageHeader.__init__(self, tree_root);
+    ADC_MessageHeader.from_tree(self, tree_root);
+    return self;
   
   def __repr__(self):
     return "<ADC_CIHMessageHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + ">"
@@ -259,10 +291,19 @@ class ADC_CIHMessageHeader(ADC_MessageHeader):
     return self.type + self.command_name;
 
 class ADC_DEMessageHeader(ADC_MessageHeader):
-  def __init__(self, tree_root):
-    ADC_MessageHeader.__init__(self, tree_root);
+  validates = ['command_name', 'my_sid', 'target_sid']
+  types = ADCParser.DE_HEADER;
+  
+  def __init__(self, **kw):
+    self.my_sid = kw.pop('my_sid', None);
+    self.target_sid = kw.pop('target_sid', None);
+    ADC_MessageHeader.__init__(self, **kw);
+  
+  def from_tree(self, tree_root):
+    ADC_MessageHeader.from_tree(self, tree_root);
     self.my_sid = tree_root.get("my_sid");
     self.target_sid = tree_root.get("target_sid");
+    return self;
   
   def __repr__(self):
     return "<ADC_DEMessageHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + " my_sid=" + repr(self.my_sid) + " target_sid=" + repr(self.target_sid) + ">"
@@ -271,8 +312,16 @@ class ADC_DEMessageHeader(ADC_MessageHeader):
     return ADCParser.SEPARATOR.join([self.type + self.command_name, self.my_sid, self.target_sid]);
 
 class ADC_FMessageHeader(ADC_MessageHeader):
-  def __init__(self, tree_root):
-    ADC_MessageHeader.__init__(self, tree_root);
+  validates = ['command_name', 'my_sid']
+  types = ADCParser.F_HEADER;
+  
+  def __init__(self, **kw):
+    self.my_sid = kw.pop('my_sid', None);
+    self.features = kw.pop('features', dict());
+    ADC_MessageHeader.__init__(self, **kw);
+  
+  def from_tree(self, tree_root):
+    ADC_MessageHeader.from_tree(self, tree_root);
     self.my_sid = tree_root.get("my_sid");
     self.feature_list = tree_root.get("feature_list");
     
@@ -282,6 +331,8 @@ class ADC_FMessageHeader(ADC_MessageHeader):
     
     for t, f in self.feature_list:
         self.features[t].append(f);
+
+    return self;
   
   def __repr__(self):
     return "<ADC_FMessageHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + " my_sid=" + repr(self.my_sid) + " features=" + repr(self.features) + ">"
@@ -291,9 +342,14 @@ class ADC_FMessageHeader(ADC_MessageHeader):
     return ADCParser.SEPARATOR.join([self.type + self.command_name, self.my_sid] + features);
 
 class ADC_UMessageHeader(ADC_MessageHeader):
-  def __init__(self, tree_root):
-    ADC_MessageHeader.__init__(self, tree_root);
+  def __init__(self, **kw):
+    ADC_MessageHeader.__init__(self, **kw);
+    self.my_cid = kw.pop('my_cid', None);
+  
+  def from_tree(self, tree_root):
+    ADC_MessageHeader.from_tree(self, tree_root);
     self.my_cid = tree_root.get("my_cid");
+    return self;
   
   def __repr__(self):
     return "<ADC_FMessageHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + " my_cid=" + repr(self.my_cid) + ">"
