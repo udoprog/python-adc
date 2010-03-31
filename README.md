@@ -27,18 +27,13 @@ is completely uncoupled from context (as is prudent).
 The following is an example usage of the parser:
 
     from adc import ADCParser
-    import sys
-
+    
     try:
-        frame = ADCParser.parseString("FART AAAA +TEST\n");
+        frame = ADCParser.parseString("FART AAAA +TEST");
     except Exception, e:
         print e;
-        sys.exit(0);
 
-    print repr(frame.header)        # -> <adc.parser.FHeader instance at 0xXXXXXXXX>
-    print frame.header.command_name # -> ART
-    print frame.header.my_sid       # -> AAAA
-    print frame.header.features     # -> {'+': ["test"], '-': []}
+    # handle frame information here
 
 The distribution contains testing code, after installing, run:
 
@@ -51,7 +46,6 @@ To run all available tests, type:
 If you want to play around with the parser, run:
 
     #> python -m adc.parser "FART AAAA +ZLIB +BASE"
-    <Message header=<FHeader type='F' command_name='ART' my_sid='AAAA' features={'+': ['ZLIB', 'BASE'], '-': []}> params=[] named_params=[]>
 
 Note: the command_name 'ART' does not really exist.
 
@@ -75,12 +69,6 @@ Try it out by doing the following INF (also see; example-message.py):
         print "bad message parameter: " + str(e)
     
     # -> CINF IP6:I6:::ffff IP4:I4:10.0.0.1 B32:PD:IZHU6QSBKI====== B32:ID:IZHU6QSBKJBECWQ=
-
-Notice how each parameter is of the correct type, if you wish to construct the same message, do this:
-
-    from adc.types import Base32, IP
-    
-    Message(CIHHeader(type='C', command_name='INF'), I4=IP('10.0.0.1', ipversion=4), I6=IP('::ffff', ipversion=6) ID=Base32('FOOBARBAZ'), PD=Base32('FOOBAR'))
 
 ADC Type declarations
 ---
