@@ -1,6 +1,7 @@
 import string
 
 from pyparsing import *
+from types import *
 
 """
 The following module is a parser based on the ADC specification version 1.0:
@@ -8,9 +9,12 @@ http://adc.sourceforge.net/ADC.html
 """
 
 import base64
-import IPy
 
 def decode_type(s, pos, toc):
+    """
+    Decode a value, key from a set of tokens to a specific type, always must return type
+    """
+    
     a_type, a_key, a_val = toc;
     
     if a_type == ADCParser.TYPE_STR:
@@ -20,42 +24,31 @@ def decode_type(s, pos, toc):
     elif a_type == ADCParser.TYPE_B32:
         return a_key, Base32(base64.b32decode(a_val));
     elif a_type == ADCParser.TYPE_IP4:
-        return a_key, IPy.IP(a_val, ipversion=4);
+        return a_key, IP(a_val, ipversion=4);
     elif a_type == ADCParser.TYPE_IP6:
-        return a_key, IPy.IP(a_val, ipversion=6);
+        return a_key, IP(a_val, ipversion=6);
     
     return None;
 
 def encode_type(k, v):
+    """
+    Encode a value, key to a specific type, always must return string or throw exception.
+    """
+    
     if type(v) == int:
         print ADCParser.TYPE_INT + ADCParser.TYPE_SEP + str(v);
-    elif type(v) == IPy.IP:
-        if v.version == 4:
-            return ADCParser.TYPE_IP4 + ADCParser.TYPE_SEP + k + "IP4"
-        elif v.version == 6:
-            return ADCParser.TYPE_IP6 + ADCParser.TYPE_SEP + k + "IP6"
+    elif isinstance(v, IP):
+        if v.version() == 4:
+            return ADCParser.TYPE_IP4 + ADCParser.TYPE_SEP + k + ADCParser.TYPE_SEP + str(v)
+        elif v.version() == 6:
+            return ADCParser.TYPE_IP6 + ADCParser.TYPE_SEP + k +  ADCParser.TYPE_SEP + str(v)
     elif isinstance(v, basestring):
         return ADCParser.TYPE_STR + ADCParser.TYPE_SEP + k + v;
     elif isinstance(v, Base32):
         return ADCParser.TYPE_B32 + ADCParser.TYPE_SEP + k + base64.b32encode(v.val);
     
-    raise ValueError("cannot encode type: " + v);
+    raise ValueError("cannot encode value: " + repr(v));
 
-class Base32:
-    """
-    A read only type to indicate that the containing message should be encoded using Base32
-    """
-    def __init__(self, val):
-        self._val = val;
-    
-    val = property(lambda self: self._val);
-    
-    def __str__(self):
-        return self.val;
-    
-    def __repr__(self):
-        return "<Base32 val=" + repr(self.val) + ">"
-    
 class ADCParser:
     """
     A pyparser parsing with all methods encapsulated as static fields in this class.
@@ -332,7 +325,7 @@ class CIHHeader(Header):
   def __init__(self, **kw):
     Header.__init__(self, **kw);
   
-  def __init__(self, tree_root):
+  def from_tree(self, tree_root):
     Header.from_tree(self, tree_root);
     return self;
   

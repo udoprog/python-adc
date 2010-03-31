@@ -36,7 +36,7 @@ class TestParser(unittest.TestCase):
         self.assertEquals(message.header.my_sid, "AAAA")
     
     def test_b_w_arguments(self):
-        message = ADCParser.parseString("BART AAAA STR:TEfoo\\sbar\\sbaz");
+        message = ADCParser.parseString("BART AAAA STR:TE:foo\\sbar\\sbaz");
         self.assertTrue(isinstance(message.header, BHeader));
         self.assertEquals(message.header.command_name, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
@@ -71,6 +71,8 @@ class TestMessages(unittest.TestCase):
     def test_argument_message(self):
         self.assertEqual(str(Message(header=BHeader(my_sid="AAAA", type='B', command_name='ART'), TE="TEST")), "BART AAAA STR:TETEST")
         self.assertEqual(str(Message(header=BHeader(my_sid="AAAA", type='B', command_name='ART'), TE=Base32("TEST"))), "BART AAAA B32:TEKRCVGVA=")
+        self.assertEqual(str(Message(header=CIHHeader(type='C', command_name='INF'), I4=IP('10.0.0.1', ipversion=4), I6=IP('::ffff', ipversion=6), ID=Base32('FOOBARBAZ'), PD=Base32('FOOBAR'))), 
+            "CINF IP6:I6:::ffff IP4:I4:10.0.0.1 B32:PDIZHU6QSBKI====== B32:IDIZHU6QSBKJBECWQ=")
 
 if __name__ == "__main__":
     unittest.main()

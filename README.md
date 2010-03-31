@@ -1,3 +1,7 @@
+THIS IS THE type-test branch
+
+See TYPE-TEST heading for differences
+
 This is suppose to be a complete implementation for the Advanced Direct Connect protocol.
 
 The parts marked with a plus (+) have been implemented, the minus parts are TODO:
@@ -51,4 +55,19 @@ If you want to play around with the parser, run:
 
 Note: the command_name 'ART' does not really exist.
 
+TYPE-TEST
+---
+This is an experimental branch where I've implemented type declaration for each argument passed through the protocol
+Try it out by doing the following INF:
+
+    #> python -m adc.parser "CINF B32:ID:IZHU6QSBKJBECWQ= B32:PD:IZHU6QSBKI====== IP4:I4:10.0.0.1 IP6:I6:::FFFF"
+    -> <Message header=<CIHHeader type='C' command_name='INF'> params={'I4': IP('10.0.0.1'), 'ID': <Base32 val='FOOBARBAZ'>, 'PD': <Base32 val='FOOBAR'>, 'I6': IP('::ffff')}>
+
+Notice how each parameter is of the correct type, if you wish to construct the same message, do this:
+
+    from adc.types import Base32, IP
+    
+    Message(CIHHeader(type='C', command_name='INF'), I4=IP('10.0.0.1', ipversion=4), I6=IP('::ffff', ipversion=6) ID=Base32('FOOBARBAZ'), PD=Base32('FOOBAR'))
+
 Have fun!
+
