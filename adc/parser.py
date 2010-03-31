@@ -10,42 +10,26 @@ http://adc.sourceforge.net/ADC.html
 
 import base64
 
-def decode_type(s, pos, toc):
-    """
-    Decode a value, key from a set of tokens to a specific type, always must return type
-    """
-    
-    a_type, a_key, a_val = toc;
-    
-    if a_type == ADCParser.TYPE_STR:
-        return a_key, a_val;
-    elif a_type == ADCParser.TYPE_INT:
-        return a_key, int(a_val);
-    elif a_type == ADCParser.TYPE_B32:
-        return a_key, Base32(base64.b32decode(a_val));
-    elif a_type == ADCParser.TYPE_IP4:
-        return a_key, IP(a_val, ipversion=4);
-    elif a_type == ADCParser.TYPE_IP6:
-        return a_key, IP(a_val, ipversion=6);
-    
-    return None;
-
 def encode_type(k, v):
     """
     Encode a value, key to a specific type, always must return string or throw exception.
     """
     
     if type(v) == int:
-        print ADCParser.TYPE_INT, k, str(v);
+        print k, str(v);
     elif isinstance(v, IP):
         if v.version() == 4:
-            return ADCParser.TYPE_IP4, k, str(v)
+            return k, str(v)
         elif v.version() == 6:
-            return ADCParser.TYPE_IP6, k, str(v)
+            return k, str(v)
     elif isinstance(v, basestring):
-        return ADCParser.TYPE_STR, k, v;
+        return k, v;
     elif isinstance(v, Base32):
-        return ADCParser.TYPE_B32, k, base64.b32encode(v.val);
+        enc = base64.b32encode(v.val);
+        o = enc.find('=');
+        if o == -1:
+            o = len(enc);
+        return k, enc[:o];
     
     raise ValueError("cannot encode value: " + repr(v));
 
@@ -161,15 +145,14 @@ class ADCParser:
     parameter_name        = Combine(Word(simple_alpha, exact=1) + Word(simple_alphanum, exact=1))
     
     """
+    parameter       ::= parameter_type ':' parameter_name (':' parameter_value)?
+    """
+    parameter       = parameter_value
     
-    named_parameter       ::= parameter_type ':' parameter_name (':' parameter_value)?
     """
-    named_parameter       = (parameter_type + Literal(TYPE_SEP).suppress() + parameter_name + Literal(TYPE_SEP).suppress() + parameter_value).setParseAction(decode_type)
-    
+    convenience function for parameters
     """
-    convenience function for named_parameters
-    """
-    named_parameters      = ZeroOrMore(separator + named_parameter).setResultsName('named_parameters')
+    parameters      = ZeroOrMore(separator + parameter).setResultsName('parameters')
     
     """
     convenience function for f_message_header
@@ -213,9 +196,9 @@ class ADCParser:
     
     """
     message_body          ::= (b_message_header | cih_message_header | de_message_header | f_message_header | u_message_header | message_header)
-                              (separator positional_parameter)* (separator named_parameter)*
+                              (separator parameter)*
     """
-    message_body          = (message_header + named_parameters).setResultsName('message_body');
+    message_body          = (message_header + parameters).setResultsName('message_body');
     
     """
     message               ::= message_body? eol
@@ -227,16 +210,16 @@ class ADCParser:
         return Message.create(ADCParser.message.parseString(s, parseAll=True));
 
 class Message:
-  def __init__(self, header=None, **params):
+  def __init__(self, header=None, *params, **named_params):
     self.header = header
-    self.params = params
+    self.params = list(params) + [''.join(encode_type(k, v)) for k, v in named_params.items()]
   
   @classmethod
   def create(klass, tree_root):
     if "message_body" in tree_root:
         header = Header.create(tree_root);
-        params = tree_root.get('named_parameters', {});
-        return Message(header, **dict(list(params)));
+        params = list(tree_root.get('parameters', []));
+        return Message(header, *params);
     else:
         return Message();
   
@@ -245,9 +228,42 @@ class Message:
 
   def __str__(self):
     if self.header is None:
-        return "";
+      return "";
     
-    return ADCParser.SEPARATOR.join([self.header.__str__()] + [ADCParser.TYPE_SEP.join(encode_type(v,e)) for v,e in self.params.items()])
+    return ADCParser.SEPARATOR.join([self.header.__str__()] + self.params)
+  
+  def decode(self, a_key, a_type, *args):
+    """
+    Decode a value, key from a set of tokens to a specific type, always must return type
+    """
+    
+    if isinstance(a_key, int):
+        a_val = self.params[a_key];
+    else:
+        a_val = filter(lambda v: v.startswith(a_key), self.params);
+        
+        if len(a_val) == 0:
+          return None;
+        
+        a_val = a_val[0][len(a_key):];
+    
+    if a_type == ADCParser.TYPE_STR:
+      return a_val;
+    elif a_type == ADCParser.TYPE_INT:
+      return int(a_val);
+    elif a_type == ADCParser.TYPE_B32:
+      if len(args) <= 0:
+        raise ValueError("decoding of type TYPE_B32 requires extra argument: <size>");
+      
+      size = args[0];
+      a_val += ("=" * (size - len(a_val)));
+      return Base32(base64.b32decode(a_val)[:size], size);
+    elif a_type == ADCParser.TYPE_IP4:
+      return IP(a_val, ipversion=4);
+    elif a_type == ADCParser.TYPE_IP6:
+      return IP(a_val, ipversion=6);
+    
+    return None;
 
 class Header:
   def __init__(self, **kw):
