@@ -108,7 +108,7 @@ A B32 type message is a base32 encoded string according to [http://tools.ietf.or
 INT
 ---
 An INT type message is an integer encoded as a string, matching the following grammar:
-    INT                   ::= '1' [0-9]*
+    INT                   ::= [1-9][0-9]+
 
 STR
 ---
