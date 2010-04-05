@@ -1,7 +1,8 @@
 import string
 
 from pyparsing import *
-from adctypes import *
+
+from .types import *
 
 """
 The following module is a parser based on the ADC specification version 1.0:

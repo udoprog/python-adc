@@ -22,6 +22,7 @@ setup(name='adc',
           "pyparsing",
           "ipy"
       ],
+      test_suite='tests',
       entry_points={
           'console_scripts': [
               'adc-server = adc.factory.server:entry',

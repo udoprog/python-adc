@@ -1,5 +1,5 @@
-from parser import *
-from adctypes import *
+from adc.parser import *
+from adc.types import *
 
 import unittest
 
