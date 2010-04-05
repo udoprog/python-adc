@@ -6,6 +6,14 @@ The parts marked with a plus (+) have been implemented, the minus parts are TODO
     - Client Logic
     - Transport (TCP/UDP/TLS)
 
+Commands
+---
+The following entry points are availble in this library:
+
+*adc-server*: Experimental adc client (implemented as a server)
+*adc-client*: Experimental adc client (to connect to the running client-server)
+*adc-tthsum*: A simple wrapper program to check the tth root hash of a file
+
 Parser
 ---
 The parser is based on pyparsing which creates a recursive descent parser.
