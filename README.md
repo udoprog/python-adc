@@ -63,21 +63,21 @@ And the following to run the client:
 
 The current protocol is just a simple rpc protocol using newlines as delimiters, and by pickling and base64 encoding the following construct:
 
-frame = {
-    'method': "remote_method",
-    'argv': ["argument 1"],
-    'kw': {'kw1': "value1"}
-};
+    frame = {
+        'method': "remote_method",
+        'argv': ["argument 1"],
+        'kw': {'kw1': "value1"}
+    };
 
 The result frame has the following format:
 
-result = {
-    'ok': False,
-    'error': "Error message describing problem"
-    'result': <the return value of the result method>
-}
+    result = {
+        'ok': False,
+        'error': "Error message describing problem"
+        'result': <the return value of the result method>
+    }
 
-'''A couple of important points to understand before using the client:'''
+_A couple of important points to understand before using the client:_
 
 * The Pickle/Base64 approach is very flexible for defining remote protocols, 
 but '''extremely''' unsafe. This is an experimental client, DO NOT USE IT 
