@@ -26,7 +26,8 @@ setup(name='adc',
       entry_points={
           'console_scripts': [
               'adc-server = adc.factory.server:entry',
-              'adc-client = adc.factory.client:entry'
+              'adc-client = adc.factory.client:entry',
+              'adc-tthsum = adc.tth:entry'
           ],
         }
       )
