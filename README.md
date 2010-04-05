@@ -10,9 +10,9 @@ Commands
 ---
 The following entry points are availble in this library:
 
-*adc-server*: Experimental adc client (implemented as a server)
-*adc-client*: Experimental adc client (to connect to the running client-server)
-*adc-tthsum*: A simple wrapper program to check the tth root hash of a file
+* _adc-server_: Experimental adc client (implemented as a server)
+* _adc-client_: Experimental adc client (to connect to the running client-server)
+* _adc-tthsum_: A simple wrapper program to check the tth root hash of a file
 
 Parser
 ---
