@@ -2,7 +2,7 @@ from twisted.protocols.basic import LineReceiver
 
 import base64, pickle
 
-class ServiceProtocol(LineReceiver):
+class ServerProtocol(LineReceiver):
     delimiter = "\n";
 
     def __init__(self):

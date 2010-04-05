@@ -2,7 +2,7 @@ from twisted.protocols.basic import LineReceiver
 
 import base64, pickle
 
-class RemoteProtocol(LineReceiver):
+class ClientProtocol(LineReceiver):
     delimiter = "\n"
     
     def send_object(self, remote, *args, **kw):

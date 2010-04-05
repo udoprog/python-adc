@@ -1,11 +1,11 @@
 from twisted.internet.protocol import Factory, ClientFactory
 from twisted.internet import reactor
 
-from ..protocol import ServiceProtocol
+from ..protocol import ServerProtocol
 from .. import entrypoint
 
-class ServiceFactory(Factory):
-    protocol = ServiceProtocol
+class ServerFactory(Factory):
+    protocol = ServerProtocol
     
     def __init__(self):
         self.connections = dict();
@@ -51,7 +51,7 @@ def main(self, argv):
     self.out.println("Starting to listen on tcp port:", port);
     
     try:
-        reactor.listenTCP(port, ServiceFactory())
+        reactor.listenTCP(port, ServerFactory())
         reactor.run()
     except Exception, e:
         self.err.println("Exception Caught:", str(e));

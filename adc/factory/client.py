@@ -4,7 +4,7 @@ from twisted.internet import reactor
 import sys
 import readline
 
-from ..protocol.remote import RemoteProtocol
+from ..protocol import ClientProtocol
 from ..printer import Printer
 from .. import entrypoint
 
@@ -24,7 +24,7 @@ def parse_input(s):
     return remote, args, kw;
 
 class RemoteClientFactory(ClientFactory):
-    protocol = RemoteProtocol
+    protocol = ClientProtocol
     
     def __init__(self):
         self.printer = Printer();
