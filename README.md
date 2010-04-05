@@ -149,7 +149,7 @@ The following grammar defines the type declaration changes for the ADC protocol:
 
 B32
 ---
-A B32 type message is a base32 encoded string according to [http://tools.ietf.org/html/rfc4648](IETF RFC4648)
+A B32 type message is a base32 encoded string according to [IETF RFC4648](http://tools.ietf.org/html/rfc4648)
 
 INT
 ---
