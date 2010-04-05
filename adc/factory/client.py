@@ -5,18 +5,8 @@ import sys
 import readline
 
 from ..protocol.remote import RemoteProtocol
-
-from pytermcaps import TermCaps
-
-class Printer(TermCaps):
-    def notice(self, *s):
-        self._writeall(self.c.bold, self.c.magenta, self._join(s), self.c.sgr0, "\n");
-    
-    def error(self, *s):
-        self._writeall(self.c.bold, self.c.red, self._join(s), self.c.sgr0, "\n");
-    
-    def message(self, *s):
-        self._writeall(self.c.bold, self.c.green, self._join(s), self.c.sgr0, "\n");
+from ..printer import Printer
+from .. import entrypoint
 
 def parse_input(s):
     r_i = s.find(' ')
@@ -83,23 +73,26 @@ class RemoteClientFactory(ClientFactory):
         print 'connection lost:', reason.getErrorMessage()
         reactor.stop()
 
-def main():
-    import sys;
-    if len(sys.argv) < 3:
-        sys.stderr.write("Usage: adc.factory <service-host> <service-port>\n");
-        sys.exit(1);
+def main(app, argv):
+    if len(argv) < 2:
+        app.err.println("Usage: adc.factory <service-host> <service-port>");
+        return 1;
     
-    host = sys.argv[1];
+    host = argv[0];
     
     try:
-        port = int(sys.argv[2]);
+        port = int(argv[1]);
     except:
-        print "Bad numeric:", sys.argv[2];
-        sys.exit(2);
+        app.err.println("Bad numeric:", argv[1]);
+        return 2;
     
     readline.parse_and_bind('tab: complete');
     reactor.connectTCP(host, port, RemoteClientFactory())
     reactor.run()
 
+def entry():
+    entrypoint.method = main;
+    entrypoint.run();
+
 if __name__ == '__main__':
-    main()
+    entry();

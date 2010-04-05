@@ -2,5 +2,5 @@
 import sys, os
 sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))));
 
-import adc.factory.remote
-adc.factory.remote.main();
+import adc.factory.client
+adc.factory.client.entry();

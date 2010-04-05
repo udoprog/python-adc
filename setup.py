@@ -22,7 +22,10 @@ setup(name='adc',
           "pyparsing",
           "ipy"
       ],
-      entry_points="""
-      # -*- Entry points: -*-
-      """,
+      entry_points={
+          'console_scripts': [
+              'adc-server = adc.factory.server:entry',
+              'adc-client = adc.factory.client:entry'
+          ],
+        }
       )

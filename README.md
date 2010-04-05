@@ -1,7 +1,3 @@
-THIS IS THE type-test branch
-
-See TYPE-TEST heading for differences
-
 This is suppose to be a complete implementation for the Advanced Direct Connect protocol.
 
 The parts marked with a plus (+) have been implemented, the minus parts are TODO:
@@ -49,7 +45,49 @@ If you want to play around with the parser, run:
 
 Note: the command_name 'ART' does not really exist.
 
-TYPE-TEST
+CLIENT
+---
+This package comes with an experimental DC client implemented with a client-server approach.
+
+The idea is that a constant service is running in the background which controls 
+the Direct Connect process, and it is administered by connecting to it via one, 
+or a set of clients.
+
+To try it out, run the following to start the service:
+
+    #> bin/adc-server <port>
+
+And the following to run the client:
+
+    #> bin/adc-client <host> <port>
+
+The current protocol is just a simple rpc protocol using newlines as delimiters, and by pickling and base64 encoding the following construct:
+
+frame = {
+    'method': "remote_method",
+    'argv': ["argument 1"],
+    'kw': {'kw1': "value1"}
+};
+
+The result frame has the following format:
+
+result = {
+    'ok': False,
+    'error': "Error message describing problem"
+    'result': <the return value of the result method>
+}
+
+'''A couple of important points to understand before using the client:'''
+
+* The Pickle/Base64 approach is very flexible for defining remote protocols, 
+but '''extremely''' unsafe. This is an experimental client, DO NOT USE IT 
+AGAINST POTENTIALLY UNSAFE CLIENTS, YOUR COMPUTER CAN LITERALLY BE DESTROYED. 
+In the future this might be fixed by defining a proper protocol, but in the 
+meantime beware, here be dragons.
+* There is no authentication, I have no plans to create a multiuser environment 
+since I find that unethical against DC common sense. 
+
+ARGUMENT TYPING SUGGESTION FOR ADC 2.0:
 ---
 This is an experimental branch where I've implemented type declaration for each argument passed through the protocol
 Try it out by doing the following INF (also see; example-message.py):

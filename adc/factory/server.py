@@ -2,6 +2,7 @@ from twisted.internet.protocol import Factory, ClientFactory
 from twisted.internet import reactor
 
 from ..protocol import ServiceProtocol
+from .. import entrypoint
 
 class ServiceFactory(Factory):
     protocol = ServiceProtocol
@@ -36,27 +37,30 @@ class ServiceFactory(Factory):
         else:
             return "could not find peer: " + host + ":" + str(port);
     
-def main():
-    import sys;
-    if len(sys.argv) < 2:
-        sys.stderr.write("Usage: adc.factory <service-port>\n");
-        sys.exit(1);
+def main(self, argv):
+    if len(argv) < 1:
+        self.out.println("Usage: adc-server <service-port>");
+        return 1;
 
     try:
-        port = int(sys.argv[1]);
+        port = int(argv[0]);
     except:
-        print "Bad numeric:", sys.argv[1];
-        sys.exit(2);
+        self.err.println("Bad numeric:", argv[0]);
+        return 2;
     
-    print "Starting to listen on tcp port:", port
+    self.out.println("Starting to listen on tcp port:", port);
     
     try:
         reactor.listenTCP(port, ServiceFactory())
         reactor.run()
     except Exception, e:
-        print "Exception Caught:", str(e);
+        self.err.println("Exception Caught:", str(e));
     
-    print "Stopped listening on tcp port:", port
+    self.out.println("Stopped listening on tcp port:", port);
+
+def entry():
+    entrypoint.method = main;
+    entrypoint.run();
 
 if __name__ == "__main__":
-    main();
+    entry();

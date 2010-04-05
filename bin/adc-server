@@ -2,5 +2,5 @@
 import sys, os
 sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))));
 
-import adc.factory.service
-adc.factory.service.main();
+import adc.factory.server
+adc.factory.server.entry();
