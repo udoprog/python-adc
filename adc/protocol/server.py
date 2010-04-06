@@ -1,6 +1,7 @@
 from twisted.protocols.basic import LineReceiver
 
-import base64, pickle
+import base64;
+import json;
 
 class ServerProtocol(LineReceiver):
     delimiter = "\n";
@@ -12,7 +13,7 @@ class ServerProtocol(LineReceiver):
         self.messages.append((fr, text));
     
     def send_object(self, obj):
-        p = base64.b64encode(pickle.dumps(obj));
+        p = base64.b64encode(json.dumps(obj));
         self.sendLine(p);
 
     def connectionMade(self):
@@ -26,7 +27,7 @@ class ServerProtocol(LineReceiver):
         print "lost connection:", self, reason
     
     def lineReceived(self, line):
-        m = pickle.loads(base64.b64decode(line));
+        m = json.loads(base64.b64decode(line));
         
         messages = self.messages;
         self.messages = list();

@@ -9,31 +9,6 @@ The following module is a parser based on the ADC specification version 1.0:
 http://adc.sourceforge.net/ADC.html
 """
 
-import base64
-
-def encode_type(k, v):
-    """
-    Encode a value, key to a specific type, always must return string or throw exception.
-    """
-    
-    if type(v) == int:
-        print k, str(v);
-    elif isinstance(v, IP):
-        if v.version() == 4:
-            return k, str(v)
-        elif v.version() == 6:
-            return k, str(v)
-    elif isinstance(v, basestring):
-        return k, v;
-    elif isinstance(v, Base32):
-        enc = base64.b32encode(v.val);
-        o = enc.find('=');
-        if o == -1:
-            o = len(enc);
-        return k, enc[:o];
-    
-    raise ValueError("cannot encode value: " + repr(v));
-
 class ADCParser:
     """
     A pyparser parsing with all methods encapsulated as static fields in this class.
@@ -46,12 +21,6 @@ class ADCParser:
     SEPARATOR=" "
     TYPE_SEP=":"
     EOL="\n"
-    
-    TYPE_INT = "INT";
-    TYPE_IP4 = "IP4";
-    TYPE_IP6 = "IP6";
-    TYPE_B32 = "B32";
-    TYPE_STR = "STR";
     
     """
     separator             ::= ' '
@@ -138,7 +107,7 @@ class ADCParser:
     """
     parameter_type        ::= 'INT' | 'STR' | 'B32' | 'IP4' | 'IP6'
     """
-    parameter_type        = (Literal(TYPE_INT) | Literal(TYPE_STR) | Literal(TYPE_B32) | Literal(TYPE_IP4) | Literal(TYPE_IP6))
+    parameter_type        = (Literal(INT) | Literal(STR) | Literal(B32) | Literal(IP4) | Literal(IP6))
     
     """
     parameter_name        ::= simple_alpha simple_alphanum
@@ -211,9 +180,13 @@ class ADCParser:
         return Message.create(ADCParser.message.parseString(s, parseAll=True));
 
 class Message:
-  def __init__(self, header=None, *params, **named_params):
+  def __init__(self, header=None, *params, **kw):
     self.header = header
-    self.params = list(params) + [''.join(encode_type(k, v)) for k, v in named_params.items()]
+    for k, a in kw.items():
+        if type(a) != list:
+            kw[k] = [a];
+    
+    self.params = list(params) + reduce(lambda o, (nk, nv): o + [nk + str(v) for v in nv], kw.items(), [])
   
   @classmethod
   def create(klass, tree_root):
@@ -233,62 +206,49 @@ class Message:
     
     return ADCParser.SEPARATOR.join([self.header.__str__()] + self.params)
   
-  def decode(self, a_key, a_type, *args):
+  def get(self, a_key):
     """
     Decode a value, key from a set of tokens to a specific type, always must return type
     """
     
     if isinstance(a_key, int):
-        a_val = self.params[a_key];
-    else:
-        a_val = filter(lambda v: v.startswith(a_key), self.params);
-        
-        if len(a_val) == 0:
-          return None;
-        
-        a_val = a_val[0][len(a_key):];
+        if a_key < 0 or a_key >= len(self.params):
+            raise ValueError("parameter index out of range: " + a_key);
+        return self.params[a_key];
     
-    if a_type == ADCParser.TYPE_STR:
-      return a_val;
-    elif a_type == ADCParser.TYPE_INT:
-      return int(a_val);
-    elif a_type == ADCParser.TYPE_B32:
-      if len(args) <= 0:
-        raise ValueError("decoding of type TYPE_B32 requires extra argument: <size>");
-      
-      size = args[0];
-      a_val += ("=" * (size - len(a_val)));
-      return Base32(base64.b32decode(a_val)[:size], size);
-    elif a_type == ADCParser.TYPE_IP4:
-      return IP(a_val, ipversion=4);
-    elif a_type == ADCParser.TYPE_IP6:
-      return IP(a_val, ipversion=6);
-    
-    return None;
+    return map(lambda s: s[len(a_key):], filter(lambda v: v.startswith(a_key), self.params));
+  
+  def getfirst(self, a_key):
+    l = self.get(a_key);
+    if len(l) == 0:
+      return None;
+    return l[0];
+  
+  def parameterKeys(self):
+    return map(lambda s: s[:2], filter(lambda v: len(v) > 2, self.params));
 
 class Header:
-  def __init__(self, **kw):
-    self.type = kw.pop('type', None);
-    self.command_name = kw.pop('command_name', None);    
+  def __init__(self, tree_root=None, **kw):
+    if tree_root:
+        self.type = tree_root.get('type', None);
+        self.cmd = tree_root.get('command_name', None);
+    else:
+        self.type = kw.pop('type', None);
+        self.cmd = kw.pop('cmd', None);    
     
     if hasattr(self, 'validates'):
       for v in self.validates:
         if getattr(self, v) is None:
-          continue;
+          raise ValueError("argument '" + str(v) + "' must not be None");
         
         try:
           val = getattr(self, v);
           assert isinstance(val, basestring), "value must be of type: basestring";
-          getattr(ADCParser, v).parseString(val, parseAll=True);
         except Exception, e:
           raise ValueError("argument '" + str(v) + "' is invalid: " + str(e));
     
     if self.type and not self.type in self.types:
       raise ValueError("type " + repr(self.type) + " not valid for: " + repr(self));
-  
-  def from_tree(self, tree_root):
-    self.type = tree_root.get('type', None);
-    self.command_name = tree_root.get('command_name', None);
   
   @classmethod
   def create(klass, tree_root):
@@ -300,124 +260,160 @@ class Header:
     header_type = header_type[0];
     
     if header_type in ADCParser.B_HEADER:
-      return BHeader().from_tree(tree_root);
+      return BHeader(tree_root);
     
     if header_type in ADCParser.CIH_HEADER:
-      return CIHHeader().from_tree(tree_root);
+      return CIHHeader(tree_root);
     
     if header_type in ADCParser.DE_HEADER:
-      return DEHeader().from_tree(tree_root);
+      return DEHeader(tree_root);
     
     if header_type in ADCParser.F_HEADER:
-      return FHeader().from_tree(tree_root);
+      return FHeader(tree_root);
     
     if header_type in ADCParser.U_HEADER:
-      return UHeader().from_tree(tree_root);
+      return UHeader(tree_root);
     
     return None;
 
 class BHeader(Header):
-  validates = ['command_name', 'my_sid'];
+  validates = ['cmd', 'my_sid'];
   types = ADCParser.B_HEADER;
   
-  def __init__(self, **kw):
-    self.my_sid = kw.pop('my_sid', None);
-    Header.__init__(self, **kw);
-  
-  def from_tree(self, tree_root):
-    Header.from_tree(self, tree_root);
-    self.my_sid = tree_root.get("my_sid");
-    return self;
+  def __init__(self, tree_root=None, **kw):
+    kw['type'] = 'B';
+    
+    if tree_root:
+        self.my_sid = tree_root.get("my_sid");
+    else:
+        self.my_sid = kw.pop('my_sid', None);
+    
+    Header.__init__(self, tree_root, **kw);
   
   def __repr__(self):
-    return "<BHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + " my_sid=" + repr(self.my_sid) + ">"
+    return "<BHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + ">"
 
   def __str__(self):
-    return ADCParser.SEPARATOR.join([self.type + self.command_name, self.my_sid]);
+    return ADCParser.SEPARATOR.join([self.type + self.cmd, self.my_sid]);
 
 class CIHHeader(Header):
-  validates = ['command_name'];
+  validates = ['cmd'];
+  types = ADCParser.CIH_HEADER;
+  
+  def __repr__(self):
+    return "<CIHHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + ">"
+  
+  def __str__(self):
+    return self.type + self.cmd;
+
+class CHeader(CIHHeader):
   types = ADCParser.CIH_HEADER;
   
   def __init__(self, **kw):
-    Header.__init__(self, **kw);
+    kw['type'] = 'C';
+    CIHHeader.__init__(self, **kw);
+
+class IHeader(CIHHeader):
+  types = ADCParser.CIH_HEADER;
   
-  def from_tree(self, tree_root):
-    Header.from_tree(self, tree_root);
-    return self;
+  def __init__(self, **kw):
+    kw['type'] = 'I';
+    CIHHeader.__init__(self, **kw);
+
+class HHeader(CIHHeader):
+  types = ADCParser.CIH_HEADER;
   
-  def __repr__(self):
-    return "<CIHHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + ">"
-  
-  def __str__(self):
-    return self.type + self.command_name;
+  def __init__(self, **kw):
+    kw['type'] = 'H';
+    CIHHeader.__init__(self, **kw);
 
 class DEHeader(Header):
-  validates = ['command_name', 'my_sid', 'target_sid']
+  validates = ['cmd', 'my_sid', 'target_sid']
+  types = ADCParser.DE_HEADER;
+  
+  def __init__(self, tree_root=None, **kw):
+    if tree_root:
+        self.my_sid = tree_root.get("my_sid");
+        self.target_sid = tree_root.get("target_sid");
+    else:
+        self.my_sid = kw.pop('my_sid', None);
+        self.target_sid = kw.pop('target_sid', None);
+    
+    Header.__init__(self, tree_root, **kw);
+  
+  def __repr__(self):
+    return "<DEHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + " target_sid=" + repr(self.target_sid) + ">"
+  
+  def __str__(self):
+    return ADCParser.SEPARATOR.join([self.type + self.cmd, self.my_sid, self.target_sid]);
+
+class DHeader(DEHeader):
   types = ADCParser.DE_HEADER;
   
   def __init__(self, **kw):
-    self.my_sid = kw.pop('my_sid', None);
-    self.target_sid = kw.pop('target_sid', None);
-    Header.__init__(self, **kw);
+    kw['type'] = 'D';
+    DEHeader.__init__(self, **kw);
+
+class EHeader(DEHeader):
+  types = ADCParser.DE_HEADER;
   
-  def from_tree(self, tree_root):
-    Header.from_tree(self, tree_root);
-    self.my_sid = tree_root.get("my_sid");
-    self.target_sid = tree_root.get("target_sid");
-    return self;
-  
-  def __repr__(self):
-    return "<DEHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + " my_sid=" + repr(self.my_sid) + " target_sid=" + repr(self.target_sid) + ">"
-  
-  def __str__(self):
-    return ADCParser.SEPARATOR.join([self.type + self.command_name, self.my_sid, self.target_sid]);
+  def __init__(self, **kw):
+    kw['type'] = 'E';
+    DEHeader.__init__(self, **kw);
 
 class FHeader(Header):
-  validates = ['command_name', 'my_sid']
+  validates = ['cmd', 'my_sid']
   types = ADCParser.F_HEADER;
   
-  def __init__(self, **kw):
-    self.my_sid = kw.pop('my_sid', None);
-    self.features = kw.pop('features', dict());
-    Header.__init__(self, **kw);
-  
-  def from_tree(self, tree_root):
-    Header.from_tree(self, tree_root);
-    self.my_sid = tree_root.get("my_sid");
-    self.feature_list = tree_root.get("feature_list");
+  def __init__(self, tree_root=None, **kw):
+    if tree_root:
+        self.my_sid = tree_root.get("my_sid");
+        self.add = list();
+        self.rem = list();
+        
+        for t, f in tree_root.get("feature_list"):
+            if t == ADCParser.FEATURE_ADD:
+                self.add.append(f);
+            elif t == ADCParser.FEATURE_REM:
+                self.rem.append(f);
+    else:
+        kw['type'] = 'F';
+        self.my_sid = kw.pop('my_sid', None);
+        self.add = kw.pop('add', []);
+        self.rem = kw.pop('rem', []);
+        
+        if type(self.add) != list:
+            self.add = [self.add];
+        
+        if type(self.rem) != list:
+            self.rem = [self.rem];
     
-    self.features = dict();
-    self.features[ADCParser.FEATURE_ADD] = list();
-    self.features[ADCParser.FEATURE_REM] = list();
-    
-    for t, f in self.feature_list:
-        self.features[t].append(f);
-
-    return self;
+    Header.__init__(self, tree_root, **kw);
   
   def __repr__(self):
-    return "<FHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + " my_sid=" + repr(self.my_sid) + " features=" + repr(self.features) + ">"
+    return "<FHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + " features=" + repr(self.features) + ">"
   
   def __str__(self):
-    features = reduce(lambda o, (ft, fv): o + [ft + v for v in fv], self.features.items(), [])
-    return ADCParser.SEPARATOR.join([self.type + self.command_name, self.my_sid] + features);
+    features = [ADCParser.FEATURE_ADD + feat for feat in self.add] + [ADCParser.FEATURE_REM + feat for feat in self.rem];
+    return ADCParser.SEPARATOR.join([self.type + self.cmd, self.my_sid] + features);
 
 class UHeader(Header):
-  def __init__(self, **kw):
-    Header.__init__(self, **kw);
-    self.my_cid = kw.pop('my_cid', None);
+  validates = ['my_cid', 'type'];
+  types = ADCParser.U_HEADER;
   
-  def from_tree(self, tree_root):
-    Header.from_tree(self, tree_root);
-    self.my_cid = tree_root.get("my_cid");
-    return self;
+  def __init__(self, tree_root=None, **kw):
+    if tree_root:
+        self.my_cid = tree_root.get("my_cid");
+    else:
+        self.my_cid = kw.pop('my_cid', None);
+    
+    Header.__init__(self, tree_root, **kw);
   
   def __repr__(self):
-    return "<FHeader type=" + repr(self.type) + " command_name=" + repr(self.command_name) + " my_cid=" + repr(self.my_cid) + ">"
+    return "<FHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + " my_cid=" + repr(self.my_cid) + ">"
   
   def __str__(self):
-    return ADCParser.SEPARATOR.join([self.type + self.command_name, self.my_cid]);
+    return ADCParser.SEPARATOR.join([self.type + self.cmd, self.my_cid]);
 
 if __name__ == "__main__":
   import sys

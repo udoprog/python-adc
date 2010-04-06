@@ -1,24 +1,10 @@
-#!/usr/bin/python
-
-from mhash import MHASH, MHASH_TIGER
-
 from merkletree import MerkleTree
 
-from . import entrypoint
+import hashing;
 
 class TigerTree(MerkleTree):
   segment = 1024;
-  hashsize = 24;
-  
-  @classmethod
-  def _hash(klass, *chunks):
-    h=MHASH(MHASH_TIGER);
-    for chunk in chunks:
-      h.update(chunk);
-    
-    d = h.digest();
-    
-    return ''.join([d[i*8:i*8 + 8][::-1] for i in range(24)])[:klass.hashsize];
+  _hash, hashsize = hashing.gethash("TIGR");
 
 def main(app, argv):
     if len(argv) < 1:
@@ -28,6 +14,8 @@ def main(app, argv):
     fn=argv[0];
     
     app.out.println(TigerTree(open(fn, "r")).base32()[:-1], fn);
+
+from . import entrypoint
 
 def entry():
     entrypoint.method = main;
