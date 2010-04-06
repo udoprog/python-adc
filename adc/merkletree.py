@@ -16,8 +16,8 @@ class MerkleTree:
     else:
       self.root = data;
 
-  @classmethod
-  def _hash(klass, *chunks):
+  @staticmethod
+  def _hash(*chunks):
     raise Exception("A MerkleTree implementation must implement the _hash class method and set the class fields 'segment' and 'hashsize'");
   
   @classmethod

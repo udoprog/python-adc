@@ -1,6 +1,6 @@
 from adc.parser import *
 from adc.types import *
-from adc.types import encode
+from adc.types import FEATURE_ADD, FEATURE_REM, encode
 
 import unittest
 
@@ -15,10 +15,10 @@ class TestParser(unittest.TestCase):
     
     def test_features_list(self):
         test_s = list();
-        test_s += [(" +AAAA -ZAAA", [[ADCParser.FEATURE_ADD, "AAAA"], [ADCParser.FEATURE_REM, "ZAAA"]])];
-        test_s += [(" +A000 -Z999", [[ADCParser.FEATURE_ADD, "A000"], ([ADCParser.FEATURE_REM, "Z999"])])];
-        test_s += [(" +A000",       [[ADCParser.FEATURE_ADD, "A000"]])];
-        test_s += [(" +A000 -Z999 -F000", [[ADCParser.FEATURE_ADD, "A000"], [ADCParser.FEATURE_REM, "Z999"], [ADCParser.FEATURE_REM, "F000"]])];
+        test_s += [(" +AAAA -ZAAA", [[FEATURE_ADD, "AAAA"], [FEATURE_REM, "ZAAA"]])];
+        test_s += [(" +A000 -Z999", [[FEATURE_ADD, "A000"], ([FEATURE_REM, "Z999"])])];
+        test_s += [(" +A000",       [[FEATURE_ADD, "A000"]])];
+        test_s += [(" +A000 -Z999 -F000", [[FEATURE_ADD, "A000"], [FEATURE_REM, "Z999"], [FEATURE_REM, "F000"]])];
         
         for s in test_s:
             i = 0;
@@ -34,20 +34,20 @@ class TestParser(unittest.TestCase):
     def test_b_message(self):
         message = ADCParser.parseString("BART AAAA");
         
-        self.assertTrue(isinstance(message.header, BHeader));
+        self.assertTrue(isinstance(message.header, Broadcast));
         self.assertEquals(message.header.cmd, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
     
     def test_b_w_arguments(self):
         message = ADCParser.parseString("BART AAAA TEfoo\\sbar\\sbaz");
-        self.assertTrue(isinstance(message.header, BHeader));
+        self.assertTrue(isinstance(message.header, Broadcast));
         self.assertEquals(message.header.cmd, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
         #self.assertEquals(message.params, {'TE': 'foo bar baz'});
     
     def test_f_message(self):
         message = ADCParser.parseString("FART AAAA +T000 -T002");
-        self.assertTrue(isinstance(message.header, FHeader));
+        self.assertTrue(isinstance(message.header, Feature));
         self.assertEquals(message.header.cmd, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
         self.assertEquals(message.header.add, ["T000"]);
@@ -55,27 +55,27 @@ class TestParser(unittest.TestCase):
     
     def test_de_message(self):
         message = ADCParser.parseString("DART AAAA BBBB");
-        self.assertTrue(isinstance(message.header, DEHeader));
+        self.assertTrue(isinstance(message.header, Direct));
         self.assertEquals(message.header.cmd, "ART")
         self.assertEquals(message.header.my_sid, "AAAA")
         self.assertEquals(message.header.target_sid, "BBBB")
     
     def test_u_message(self):
         message = ADCParser.parseString("UART AAAA");
-        self.assertTrue(isinstance(message.header, UHeader));
+        self.assertTrue(isinstance(message.header, UDP));
         self.assertEqual(message.header.my_cid, "AAAA");
 
 class TestMessages(unittest.TestCase):
     def test_b_message(self):
-        self.assertEqual(str(Message(header=BHeader(my_sid="AAAA", cmd='ART'))), "BART AAAA")
+        self.assertEqual(str(Message(Broadcast(my_sid="AAAA", cmd='ART'))), "BART AAAA")
     
     def test_f_message(self):
-        self.assertEqual(str(Message(header=FHeader(my_sid="AAAA", cmd='ART', add="ZLIB"))), "FART AAAA +ZLIB")
+        self.assertEqual(str(Message(Feature(my_sid="AAAA", cmd='ART', add="ZLIB"))), "FART AAAA +ZLIB")
     
     def test_argument_message(self):
-        self.assertEqual(str(Message(header=BHeader(my_sid="AAAA", cmd='ART'), TE="TEST")), "BART AAAA TETEST")
-        self.assertEqual(str(Message(header=BHeader(my_sid="AAAA", cmd='ART'), TE=encode(Base32("TEST")))), "BART AAAA TEKRCVGVA")
-        self.assertEqual(str(Message(header=CHeader(cmd='INF'), I4=encode(IP('10.0.0.1', ipversion=4)), I6=encode(IP('::ffff', ipversion=6)), ID=encode(Base32('FOOBARBAZ')), PD=encode(Base32('FOOBAR')))), 
+        self.assertEqual(str(Message(Broadcast(my_sid="AAAA", cmd='ART'), TE="TEST")), "BART AAAA TETEST")
+        self.assertEqual(str(Message(Broadcast(my_sid="AAAA", cmd='ART'), TE=encode(Base32("TEST")))), "BART AAAA TEKRCVGVA")
+        self.assertEqual(str(Message(Client(cmd='INF'), I4=encode(IP('10.0.0.1', ipversion=4)), I6=encode(IP('::ffff', ipversion=6)), ID=encode(Base32('FOOBARBAZ')), PD=encode(Base32('FOOBAR')))), 
             "CINF I6::ffff I410.0.0.1 PDIZHU6QSBKI IDIZHU6QSBKJBECWQ")
 
 if __name__ == "__main__":

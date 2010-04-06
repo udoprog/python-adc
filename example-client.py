@@ -1,4 +1,4 @@
-from twisted.internet.protocol import Factory, ClientFactory
+from twisted.internet.protocol import ClientFactory
 from twisted.internet import reactor
 
 import uuid;
@@ -139,7 +139,8 @@ class ADCClientToHubProtocol(ADCProtocol):
         if NI in self.users:
             nick_info = self.users[NI];
         else:
-            nick_info = self.users[NI] = ADCInfo(frame.header.my_sid);
+            nick_info = ADCInfo(frame.header.my_sid);
+            self.users[NI] = nick_info;
             self.users_by_sid[nick_info.sid] = nick_info;
         
         self._update_adc_info(nick_info, frame);
