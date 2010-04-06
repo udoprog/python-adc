@@ -1,14 +1,15 @@
 from twisted.internet.protocol import Factory, ClientFactory
 from twisted.internet import reactor
 
-from adc.protocol import ADCProtocol
-
 import uuid;
 
-from adc.types import *
+from adc.protocol import ADCProtocol
 
+# Context
 from adc.protocol.helpers import *
-
+# contants, encode/decode functions
+from adc.types import *
+# Logger
 from adc.logger import *
 
 class ADCClientToHubProtocol(ADCProtocol):
@@ -28,13 +29,8 @@ class ADCClientToHubProtocol(ADCProtocol):
         self.users_by_sid = dict();
     
     def sendInfo(self, **kw):
-        base = dict(
-            NI=encode(self.factory.nickname),
-            SS=encode(self.factory.sharesize)
-        );
-        
-        base.update(kw);
-        
+        arguments = dict(NI=encode(self.factory.nickname), SS=encode(self.factory.sharesize));
+        arguments.update(kw);
         self.sendFrame(Message(BHeader(cmd='INF', my_sid=encode(self.sid)), **base));
     
     @context(Context.INITIAL)
@@ -61,10 +57,13 @@ class ADCClientToHubProtocol(ADCProtocol):
             self.log.error("No hash method specified, closing connection");
             self.transport.loseConnection();
         
-        if not self.cid:
-            self.pid = self.hash_method(uuid.uuid1().hex);
-            self.cid = self.hash_method(self.pid);
-            self.log.debug("Private id:", repr(self.pid));
+        if self.cid:
+            self.log.error("Cid already set, context is invalid");
+            self.transport.loseConnection();
+        
+        self.pid = self.hash_method(uuid.uuid1().hex);
+        self.cid = self.hash_method(self.pid);
+        self.log.debug("Private id:", repr(self.pid));
     
     @context(Context.PROTOCOL, IHeader, 'SID')
     @parameters(STR)
@@ -189,3 +188,6 @@ class ADCClientToHub(ClientFactory):
 def entry():
     reactor.connectTCP("localhost", 1511, ADCClientToHub(nickname="udoprog", sharesize=1024**5));
     reactor.run();
+
+if __name__ == "__main__":
+    entry();

@@ -8,6 +8,18 @@ IP6 = "IP6";
 B32 = "B32";
 STR = "STR";
 
+FEATURE_ADD="+"
+FEATURE_REM="-"
+SEPARATOR=" "
+TYPE_SEP=":"
+EOL="\n"
+
+B_HEADER = ["B"];
+CIH_HEADER = ["C", "I", "H"];
+DE_HEADER = ["D", "E"];
+F_HEADER = ["F"];
+U_HEADER = ["U"];
+
 class Base32:
     """
     A read only type to indicate that the containing message should be encoded using Base32
@@ -102,7 +114,7 @@ class Message:
     if self.header is None:
       return "";
     
-    return ADCParser.SEPARATOR.join([self.header.__str__()] + self.params)
+    return SEPARATOR.join([self.header.__str__()] + self.params)
   
   def get(self, a_key):
     """
@@ -160,10 +172,10 @@ class Header:
     
     header_type = header_type[0];
     
-    if header_type in ADCParser.B_HEADER:
+    if header_type in B_HEADER:
       return BHeader(tree_root);
     
-    if header_type in ADCParser.CIH_HEADER:
+    if header_type in CIH_HEADER:
       if header_type == 'C':
           return CHeader(tree_root);
       if header_type == 'I':
@@ -171,23 +183,23 @@ class Header:
       if header_type == 'H':
           return HHeader(tree_root);
     
-    if header_type in ADCParser.DE_HEADER:
+    if header_type in DE_HEADER:
       if header_type == 'D':
         return DHeader(tree_root);
       if header_type == 'E':
         return EHeader(tree_root);
     
-    if header_type in ADCParser.F_HEADER:
+    if header_type in F_HEADER:
       return FHeader(tree_root);
     
-    if header_type in ADCParser.U_HEADER:
+    if header_type in U_HEADER:
       return UHeader(tree_root);
     
     return None;
 
 class BHeader(Header):
   validates = ['cmd', 'my_sid'];
-  types = ADCParser.B_HEADER;
+  types = B_HEADER;
   
   def __init__(self, tree_root=None, **kw):
     kw['type'] = 'B';
@@ -203,11 +215,11 @@ class BHeader(Header):
     return "<BHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + ">"
 
   def __str__(self):
-    return ADCParser.SEPARATOR.join([self.type + self.cmd, self.my_sid]);
+    return SEPARATOR.join([self.type + self.cmd, self.my_sid]);
 
 class CIHHeader(Header):
   validates = ['cmd'];
-  types = ADCParser.CIH_HEADER;
+  types = CIH_HEADER;
   
   def __repr__(self):
     return "<CIHHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + ">"
@@ -216,21 +228,21 @@ class CIHHeader(Header):
     return self.type + self.cmd;
 
 class CHeader(CIHHeader):
-  types = ADCParser.CIH_HEADER;
+  types = CIH_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'C';
     CIHHeader.__init__(self, *args, **kw);
 
 class IHeader(CIHHeader):
-  types = ADCParser.CIH_HEADER;
+  types = CIH_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'I';
     CIHHeader.__init__(self, *args, **kw);
 
 class HHeader(CIHHeader):
-  types = ADCParser.CIH_HEADER;
+  types = CIH_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'H';
@@ -238,7 +250,7 @@ class HHeader(CIHHeader):
 
 class DEHeader(Header):
   validates = ['cmd', 'my_sid', 'target_sid']
-  types = ADCParser.DE_HEADER;
+  types = DE_HEADER;
   
   def __init__(self, tree_root=None, **kw):
     if tree_root:
@@ -254,17 +266,17 @@ class DEHeader(Header):
     return "<DEHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + " target_sid=" + repr(self.target_sid) + ">"
   
   def __str__(self):
-    return ADCParser.SEPARATOR.join([self.type + self.cmd, self.my_sid, self.target_sid]);
+    return SEPARATOR.join([self.type + self.cmd, self.my_sid, self.target_sid]);
 
 class DHeader(DEHeader):
-  types = ADCParser.DE_HEADER;
+  types = DE_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'D';
     DEHeader.__init__(self, *args, **kw);
 
 class EHeader(DEHeader):
-  types = ADCParser.DE_HEADER;
+  types = DE_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'E';
@@ -272,7 +284,7 @@ class EHeader(DEHeader):
 
 class FHeader(Header):
   validates = ['cmd', 'my_sid']
-  types = ADCParser.F_HEADER;
+  types = F_HEADER;
   
   def __init__(self, tree_root=None, **kw):
     if tree_root:
@@ -281,9 +293,9 @@ class FHeader(Header):
         self.rem = list();
         
         for t, f in tree_root.get("feature_list"):
-            if t == ADCParser.FEATURE_ADD:
+            if t == FEATURE_ADD:
                 self.add.append(f);
-            elif t == ADCParser.FEATURE_REM:
+            elif t == FEATURE_REM:
                 self.rem.append(f);
     else:
         kw['type'] = 'F';
@@ -303,12 +315,12 @@ class FHeader(Header):
     return "<FHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + " features=" + repr(self.features) + ">"
   
   def __str__(self):
-    features = [ADCParser.FEATURE_ADD + feat for feat in self.add] + [ADCParser.FEATURE_REM + feat for feat in self.rem];
-    return ADCParser.SEPARATOR.join([self.type + self.cmd, self.my_sid] + features);
+    features = [FEATURE_ADD + feat for feat in self.add] + [FEATURE_REM + feat for feat in self.rem];
+    return SEPARATOR.join([self.type + self.cmd, self.my_sid] + features);
 
 class UHeader(Header):
   validates = ['my_cid', 'type'];
-  types = ADCParser.U_HEADER;
+  types = U_HEADER;
   
   def __init__(self, tree_root=None, **kw):
     if tree_root:
@@ -322,5 +334,5 @@ class UHeader(Header):
     return "<FHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + " my_cid=" + repr(self.my_cid) + ">"
   
   def __str__(self):
-    return ADCParser.SEPARATOR.join([self.type + self.cmd, self.my_cid]);
+    return SEPARATOR.join([self.type + self.cmd, self.my_cid]);
 

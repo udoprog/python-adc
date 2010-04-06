@@ -1,5 +1,3 @@
-__all__ = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'NONE'];
-
 import datetime;
 import collections;
 
@@ -64,3 +62,5 @@ class Logger:
     
     def setcb(self, sev, cb):
         self.callbacks[sev] = cb;
+
+__all__ = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'NONE', 'Logger'];

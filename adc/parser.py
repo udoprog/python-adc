@@ -2,7 +2,7 @@ import string
 
 from pyparsing import *
 
-from .types import Message
+from .types import *
 
 """
 The following module is a parser based on the ADC specification version 1.0:
@@ -15,12 +15,6 @@ class ADCParser:
     """
     ParserElement.setDefaultWhitespaceChars("")
     ParserElement.enablePackrat();
-    
-    FEATURE_ADD="+"
-    FEATURE_REM="-"
-    SEPARATOR=" "
-    TYPE_SEP=":"
-    EOL="\n"
     
     """
     separator             ::= ' '
@@ -132,31 +126,26 @@ class ADCParser:
     """
     b_message_header      ::= 'B' command_name separator my_sid
     """
-    B_HEADER = ["B"];
     b_message_header      = Word(B_HEADER, exact=1).setResultsName('type') + command_name + separator + my_sid;
     
     """
     cih_message_header    ::= ('C' | 'I' | 'H') command_name
     """
-    CIH_HEADER = ["C", "I", "H"];
     cih_message_header    = (Word(CIH_HEADER, exact=1)).setResultsName('type') + command_name
     
     """
     de_message_header     ::= ('D' | 'E') command_name separator my_sid separator target_sid
     """
-    DE_HEADER = ["D", "E"];
     de_message_header     = Word(DE_HEADER, exact = 1).setResultsName('type') + command_name + separator + my_sid + separator + target_sid
     
     """
     f_message_header      ::= 'F' command_name separator my_sid separator (('+'|'-') feature_name)+
     """
-    F_HEADER = ["F"];
     f_message_header      = Word(F_HEADER, exact=1).setResultsName('type') + command_name + separator + my_sid + feature_list
 
     """
     u_message_header      ::= 'U' command_name separator my_cid
     """
-    U_HEADER = ["U"];
     u_message_header      = Word(U_HEADER, exact=1).setResultsName('type') + command_name + separator + my_cid
     
     """
