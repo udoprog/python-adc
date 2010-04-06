@@ -173,31 +173,19 @@ class Header:
     header_type = header_type[0];
     
     if header_type in B_HEADER:
-      return BHeader(tree_root);
-    
+      return Broadcast(tree_root);
     if header_type in CIH_HEADER:
-      if header_type == 'C':
-          return CHeader(tree_root);
-      if header_type == 'I':
-          return IHeader(tree_root);
-      if header_type == 'H':
-          return HHeader(tree_root);
-    
+      if header_type == 'C': return Client(tree_root);
+      if header_type == 'I': return Info(tree_root);
+      if header_type == 'H': return Hub(tree_root);
     if header_type in DE_HEADER:
-      if header_type == 'D':
-        return DHeader(tree_root);
-      if header_type == 'E':
-        return EHeader(tree_root);
-    
-    if header_type in F_HEADER:
-      return FHeader(tree_root);
-    
-    if header_type in U_HEADER:
-      return UHeader(tree_root);
-    
+      if header_type == 'D': return Direct(tree_root);
+      if header_type == 'E': return Echo(tree_root);
+    if header_type in F_HEADER: return Feature(tree_root);
+    if header_type in U_HEADER: return UDP(tree_root);
     return None;
 
-class BHeader(Header):
+class Broadcast(Header):
   validates = ['cmd', 'my_sid'];
   types = B_HEADER;
   
@@ -212,43 +200,49 @@ class BHeader(Header):
     Header.__init__(self, tree_root, **kw);
   
   def __repr__(self):
-    return "<BHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + ">"
+    return "<Broadcast cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + ">"
 
   def __str__(self):
     return SEPARATOR.join([self.type + self.cmd, self.my_sid]);
 
-class CIHHeader(Header):
+class CIH(Header):
   validates = ['cmd'];
   types = CIH_HEADER;
-  
-  def __repr__(self):
-    return "<CIHHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + ">"
   
   def __str__(self):
     return self.type + self.cmd;
 
-class CHeader(CIHHeader):
+class Client(CIH):
   types = CIH_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'C';
-    CIHHeader.__init__(self, *args, **kw);
+    CIH.__init__(self, *args, **kw);
+  
+  def __repr__(self):
+    return "<Client cmd=" + repr(self.cmd) + ">"
 
-class IHeader(CIHHeader):
+class Info(CIH):
   types = CIH_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'I';
-    CIHHeader.__init__(self, *args, **kw);
+    CIH.__init__(self, *args, **kw);
+  
+  def __repr__(self):
+    return "<Info cmd=" + repr(self.cmd) + ">"
 
-class HHeader(CIHHeader):
+class Hub(CIH):
   types = CIH_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'H';
-    CIHHeader.__init__(self, *args, **kw);
+    CIH.__init__(self, *args, **kw);
+  
+  def __repr__(self):
+    return "<Hub cmd=" + repr(self.cmd) + ">"
 
-class DEHeader(Header):
+class DE(Header):
   validates = ['cmd', 'my_sid', 'target_sid']
   types = DE_HEADER;
   
@@ -262,27 +256,30 @@ class DEHeader(Header):
     
     Header.__init__(self, tree_root, **kw);
   
-  def __repr__(self):
-    return "<DEHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + " target_sid=" + repr(self.target_sid) + ">"
-  
   def __str__(self):
     return SEPARATOR.join([self.type + self.cmd, self.my_sid, self.target_sid]);
 
-class DHeader(DEHeader):
+class Direct(DE):
   types = DE_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'D';
-    DEHeader.__init__(self, *args, **kw);
+    DE.__init__(self, *args, **kw);
+  
+  def __repr__(self):
+    return "<Direct cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + " target_sid=" + repr(self.target_sid) + ">"
 
-class EHeader(DEHeader):
+class Echo(DE):
   types = DE_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'E';
-    DEHeader.__init__(self, *args, **kw);
+    DE.__init__(self, *args, **kw);
+  
+  def __repr__(self):
+    return "<Echo cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + " target_sid=" + repr(self.target_sid) + ">"
 
-class FHeader(Header):
+class Feature(Header):
   validates = ['cmd', 'my_sid']
   types = F_HEADER;
   
@@ -312,13 +309,13 @@ class FHeader(Header):
     Header.__init__(self, tree_root, **kw);
   
   def __repr__(self):
-    return "<FHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + " features=" + repr(self.features) + ">"
+    return "<Feature cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + " features=" + repr(self.features) + ">"
   
   def __str__(self):
     features = [FEATURE_ADD + feat for feat in self.add] + [FEATURE_REM + feat for feat in self.rem];
     return SEPARATOR.join([self.type + self.cmd, self.my_sid] + features);
 
-class UHeader(Header):
+class UDP(Header):
   validates = ['my_cid', 'type'];
   types = U_HEADER;
   
@@ -331,8 +328,10 @@ class UHeader(Header):
     Header.__init__(self, tree_root, **kw);
   
   def __repr__(self):
-    return "<FHeader type=" + repr(self.type) + " cmd=" + repr(self.cmd) + " my_cid=" + repr(self.my_cid) + ">"
+    return "<UDP cmd=" + repr(self.cmd) + " my_cid=" + repr(self.my_cid) + ">"
   
   def __str__(self):
     return SEPARATOR.join([self.type + self.cmd, self.my_cid]);
 
+__all__ = [ "Message", "Client", "Info", "Hub", "Direct", "Echo", "Feature", "UDP", "Broadcast",
+            "INT", "IP4", "IP6", "B32", "STR", "IP", "Base32"];

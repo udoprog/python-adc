@@ -2,6 +2,7 @@ import string
 
 from pyparsing import *
 
+from .types import SEPARATOR, EOL, F_HEADER, DE_HEADER, CIH_HEADER, U_HEADER, B_HEADER, FEATURE_ADD, FEATURE_REM
 from .types import *
 
 """

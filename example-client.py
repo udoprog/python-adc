@@ -29,18 +29,16 @@ class ADCClientToHubProtocol(ADCProtocol):
         self.users_by_sid = dict();
     
     def sendInfo(self, **kw):
-        arguments = dict(NI=encode(self.factory.nickname), SS=encode(self.factory.sharesize));
-        arguments.update(kw);
-        self.sendFrame(Message(BHeader(cmd='INF', my_sid=encode(self.sid)), **base));
+        kw.update(dict(NI=encode(self.factory.nickname), SS=encode(self.factory.sharesize)));
+        self.sendFrame(Message(Broadcast(cmd='INF', my_sid=encode(self.sid)), **kw));
     
     @context(Context.INITIAL)
     def do_initial(self):
         self.setstate(Context.PROTOCOL);
-        
-        sup = Message(HHeader(cmd='SUP'), AD=["TIGR", "BASE", "GZIP"]);
+        sup = Message(Hub(cmd='SUP'), AD=["TIGR", "BASE", "GZIP"]);
         self.sendFrame(sup);
     
-    @context(Context.PROTOCOL, IHeader, "SUP")
+    @context(Context.PROTOCOL, Info, "SUP")
     @parameters(AD=STR, RM=STR)
     def do_isup(self, frame, AD, RM):
         for a in AD:
@@ -65,7 +63,7 @@ class ADCClientToHubProtocol(ADCProtocol):
         self.cid = self.hash_method(self.pid);
         self.log.debug("Private id:", repr(self.pid));
     
-    @context(Context.PROTOCOL, IHeader, 'SID')
+    @context(Context.PROTOCOL, Info, 'SID')
     @parameters(STR)
     def set_sid(self, frame, sid):
         if self.sid is not None:
@@ -75,14 +73,14 @@ class ADCClientToHubProtocol(ADCProtocol):
         self.sid = sid;
         self.setstate(Context.IDENTIFY);
 
-    @context(Context.IDENTIFY, IHeader, 'STA')
+    @context(Context.IDENTIFY, Info, 'STA')
     def identify_ista(self, *args, **kw):
         """
         Catch an IDENTIFY ISTA message and send it to a generic handler.
         """
         self.any_ista(*args, **kw);
     
-    @context(Context.NORMAL, IHeader, 'STA')
+    @context(Context.NORMAL, Info, 'STA')
     def normal_ista(self, *args, **kw):
         """
         Catch an NORMAL ISTA message and send it to generic handler.
@@ -113,7 +111,7 @@ class ADCClientToHubProtocol(ADCProtocol):
             else:
                 info[k] = frame.getfirst(k);
     
-    @context(Context.IDENTIFY, IHeader, 'INF')
+    @context(Context.IDENTIFY, Info, 'INF')
     def identify_iinf(self, frame):
         """
         This should be the initial INF message sent from the server.
@@ -135,7 +133,7 @@ class ADCClientToHubProtocol(ADCProtocol):
     #def adc_normal_iinf(self, frame):
     #    self.any_iinf(frame);
     
-    @context(Context.NORMAL, BHeader, 'INF')
+    @context(Context.NORMAL, Broadcast, 'INF')
     @parameters(NI=STR)
     def any_binf(self, frame, NI):
         if NI in self.users:
@@ -150,7 +148,7 @@ class ADCClientToHubProtocol(ADCProtocol):
         nick_info.clean();
         self.log.debug("updated info:", NI, str(nick_info));
     
-    @context(Context.NORMAL, BHeader, 'MSG')
+    @context(Context.NORMAL, Broadcast, 'MSG')
     @parameters(STR)
     def hub_message(self, frame, message):
         from_sid = frame.header.my_sid;
