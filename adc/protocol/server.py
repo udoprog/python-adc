@@ -34,7 +34,11 @@ class ServerProtocol(LineReceiver):
         try:
             remote = m['remote'];
             args = m.get('args', []);
-            kw = m.get('kw', {});
+            kw_u = m.get('kw', {});
+            kw = dict();
+
+            for k, v in kw_u.items():
+                kw[str(k)] = v;
             
             attr = "remote_" + remote;
             

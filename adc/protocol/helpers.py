@@ -68,7 +68,7 @@ class ADCInfo(dict):
         'SS': INT, 'SF': INT, 'VE': STR, 'US': INT, 'DS': INT, 'SL': INT,
         'AS': INT, 'AM': INT, 'EM': STR, 'NI': STR, 'DE': STR, 'HN': INT,
         'HR': INT, 'HO': INT, 'TO': STR, 'CT': INT, 'AW': INT, 'SU': STR,
-        'RF': STR, 'KP': STR
+        'RF': STR, 'KP': STR, 'HI': STR, 'OP': STR
     };
     
     def __init__(self, sid, *args, **kw):
@@ -81,7 +81,8 @@ class ADCInfo(dict):
             raise ValueError("key can only be updated once before cleaned: " + k);
         
         if not self.exists(k):
-            raise ValueError("invalid info key: " + k);
+            dict.__setitem__(self, k, decode(v, STR));
+            return;
         
         self.dirtykeys.add(k);
         dict.__setitem__(self, k, decode(v, self.TYPES[k]));
@@ -94,7 +95,8 @@ class ADCInfo(dict):
             raise ValueError("key can only be updated once before cleaned: " + k);
         
         if not self.exists(k):
-            raise ValueError("invalid info key: " + k);
+            dict.__setitem__(self, k, decode(v, STR));
+            return;
         
         dv = decode(v, self.TYPES[k], *args);
         
@@ -176,17 +178,14 @@ def parameters(*required_args, **required_kw):
             kw = dict();
             
             for i, t in enumerate(required_args):
-                if type(t) == tuple:
-                    args.append(decode(frame.get(i), *t));
-                else:
-                    args.append(decode(frame.get(i), t));
+                rval = frame.get(i);
+                if rval is None: raise ValueError("missing required positional argument: " + str(i));
+                if type(t) == tuple: args.append(decode(rval, *t));
+                else: args.append(decode(rval, t));
             
             for k, t in required_kw.items():
-                kw[k] = [decode(v, t) for v in frame.get(k)];
-
-            for k in kw.keys():
-                if len(kw[k]) == 1:
-                    kw[k] = kw[k][0];
+                plist = frame.get(k)
+                kw[k] = [decode(v, t) for v in plist];
             
             self.log.debug("entering:", f.func_name, repr(args), repr(kw));
             try:

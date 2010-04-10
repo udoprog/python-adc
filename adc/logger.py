@@ -17,12 +17,43 @@ SEV_NAMES = {
     NONE: "NONE",
 };
 
+class ChildLogger:
+    """
+    A Childlogger is a reference copy to a specific logger, but has a specific prefix added to the list of messages.
+    """
+    def __init__(self, prefix, parent):
+        self.prefix = prefix;
+        self.parent = parent;
+    
+    def setseverity(self, sev):
+        self.parent.setseverity(sev);
+    
+    def setcb(self, sev, cb):
+        self.parent.setcb(sev, cb);
+    
+    def info(self, *m):
+        m = [self.prefix] + list(m);
+        self.parent.info(*m);
+    
+    def debug(self, *m):
+        m = [self.prefix] + list(m);
+        self.parent.debug(*m);
+    
+    def warn(self, *m):
+        m = [self.prefix] + list(m);
+        self.parent.warn(*m);
+    
+    def error(self, *m):
+        m = [self.prefix] + list(m);
+        self.parent.error(*m);
+
 class Logger:
-    def __init__(self, limit=1000, sev=INFO):
+    def __init__(self, limit=1000, sev=INFO, prefix=None):
         self.sev = INFO;
         self.limit = limit;
         self.messages = list();
         self.callbacks = dict();
+        self.prefix = prefix;
     
     def setseverity(self, sev):
         if sev not in SEV_NAMES:
@@ -62,5 +93,8 @@ class Logger:
     
     def setcb(self, sev, cb):
         self.callbacks[sev] = cb;
+    
+    def prefixLog(self, prefix):
+        return ChildLogger(prefix, self);
 
 __all__ = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'NONE', 'Logger'];

@@ -31,10 +31,6 @@ class ADCProtocol(LineReceiver):
         """
         This is the entry for client-client connections.
         """
-        if not hasattr(self.factory, 'connectionMade'):
-            raise Exception("Factory must have 'connectionMade' method defined");
-        
-        self.factory.connectionMade(self);
         self.context.runinitial(self);
     
     def connectionLost(self, reason):
