@@ -20,7 +20,8 @@ setup(name='adc',
       install_requires=[
           # -*- Extra requirements: -*-
           "pyparsing",
-          "ipy"
+          "ipy",
+          "python-mhash"
       ],
       test_suite='tests',
       entry_points={

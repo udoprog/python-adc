@@ -1,100 +1,46 @@
-import datetime;
-import collections;
+import logging
 
-logitem = collections.namedtuple('logitem', 'time sev sev_s msg');
-
-DEBUG=8;
-INFO=6;
-WARN=4;
-ERROR=2;
-NONE=0;
-
-SEV_NAMES = {
-    DEBUG: "DEBUG",
-    INFO: "INFO",
-    WARN: "WARN",
-    ERROR: "ERROR",
-    NONE: "NONE",
-};
-
-class ChildLogger:
-    """
-    A Childlogger is a reference copy to a specific logger, but has a specific prefix added to the list of messages.
-    """
-    def __init__(self, prefix, parent):
-        self.prefix = prefix;
-        self.parent = parent;
-    
-    def setseverity(self, sev):
-        self.parent.setseverity(sev);
-    
-    def setcb(self, sev, cb):
-        self.parent.setcb(sev, cb);
-    
-    def info(self, *m):
-        m = [self.prefix] + list(m);
-        self.parent.info(*m);
-    
-    def debug(self, *m):
-        m = [self.prefix] + list(m);
-        self.parent.debug(*m);
-    
-    def warn(self, *m):
-        m = [self.prefix] + list(m);
-        self.parent.warn(*m);
-    
-    def error(self, *m):
-        m = [self.prefix] + list(m);
-        self.parent.error(*m);
+import sys;
+import time;
 
 class Logger:
-    def __init__(self, limit=1000, sev=INFO, prefix=None):
-        self.sev = INFO;
-        self.limit = limit;
-        self.messages = list();
-        self.callbacks = dict();
-        self.prefix = prefix;
-    
-    def setseverity(self, sev):
-        if sev not in SEV_NAMES:
-            raise ValueError("Not a valid severity: " + str(sev));
-        self.sev = sev;
-    
-    def __addmessage(self, sev, *m):
-        if sev not in SEV_NAMES:
-            return;
+    delimiter = "\n";
 
-        if self.sev < sev:
-            return;
-        
-        self.messages.append(logitem(datetime.datetime.now(), sev, SEV_NAMES[sev], m));
-        
-        if len(self.messages) > self.limit:
-            self.messages.pop(0);
-        
-        for cb_sev, cb in self.callbacks.items():
-            if sev <= cb_sev:
-                cb(self.messages[-1]);
-    
-    def lastm(self, count=1):
-        return self.messages[-count];
-    
-    def info(self, *m):
-        self.__addmessage(INFO, *m);
-    
-    def debug(self, *m):
-        self.__addmessage(DEBUG, *m);
-    
-    def warn(self, *m):
-        self.__addmessage(WARN, *m);
+    def __init__(self, klass, *prefixes):
+        self.stream = sys.stdout;
+        self.klass = klass.__name__;
+        self.logLevel = logging.DEBUG;
+        self.prefixes = prefixes;
 
-    def error(self, *m):
-        self.__addmessage(ERROR, *m);
-    
-    def setcb(self, sev, cb):
-        self.callbacks[sev] = cb;
-    
-    def prefixLog(self, prefix):
-        return ChildLogger(prefix, self);
+    def setPrefixes(self, *prefixes):
+        self.prefixes = prefixes;
 
-__all__ = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'NONE', 'Logger'];
+    def setLogLevel(self, logLevel):
+        self.logLevel = logLevel;
+
+    def __encode(self, *msg):
+        return ' '.join(str(s).encode("utf-8") for s in msg)
+
+    def onMessageLine(self, s, logLevel):
+        self.stream.write(s + self.delimiter);
+    
+    def msg(self, *msg, **kw):
+        logLevel = kw.get("logLevel", logging.INFO);
+        if self.logLevel <= logLevel:
+            now = time.strftime("%Y-%m-%d %H:%M:%S%z")
+            self.onMessageLine(self.__encode(now, "[" + self.klass + "]", "[" + self.__encode(*self.prefixes) + "]", self.__encode(*msg)), logLevel);
+    
+    def err(self, *msg):
+        import traceback;
+        import sys
+
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        for file, line, func, method in traceback.extract_tb(exc_traceback):
+           self.msg(*["  ", file, "line", line, "in", func], logLevel=logging.ERROR);
+           self.msg(*["    ", method], logLevel=logging.ERROR);
+        
+        self.msg(*[exc_type.__name__ + ":", exc_value], logLevel=logging.ERROR);
+
+        #for line in traceback.format_stack(exc_traceback):
+        #    for l in line.split("\n"):

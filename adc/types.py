@@ -2,6 +2,13 @@ import base64
 
 from IPy import IP
 
+class List:
+    """
+    A simple type helpers which speicifies that a set of parameters are expected as a list.
+    """
+    def __init__(self, type):
+        self.type = type;
+
 INT = "INT";
 IP4 = "IP4";
 IP6 = "IP6";
@@ -334,4 +341,4 @@ class UDP(Header):
     return SEPARATOR.join([self.type + self.cmd, self.my_cid]);
 
 __all__ = [ "Message", "Client", "Info", "Hub", "Direct", "Echo", "Feature", "UDP", "Broadcast",
-            "INT", "IP4", "IP6", "B32", "STR", "IP", "Base32"];
+            "INT", "IP4", "IP6", "B32", "STR", "IP", "Base32", "List"];
