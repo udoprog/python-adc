@@ -9,11 +9,26 @@ from twisted.python import log
 import logging
 import uuid
 
-class HubUser:
+class HubUser(object):
+  TYPES = {
+    'NI': ('nick', "twisteduser", STR),
+    'SS': ('sharesize', 0, INT),
+    'I4': ('ip4', None, IP4),
+    'I6': ('ip6', None, IP4),
+  };
+
   def __init__(self, **kw):
-    self.sid = kw.get("sid", None);
-    self.nick = kw.get("nick", "twisteduser");
-    self.sharesize = kw.get("sharesize", 0);
+    self.sid = kw.pop("sid", None);
+    self.update(**kw);
+  
+  def update(self, **kw):
+    for k, v in self.TYPES.items():
+      attr, default, t = v;
+      
+      if k in kw:
+        setattr(self, attr, decode(kw[k], t));
+      elif not hasattr(self, attr):
+        setattr(self, attr, default);
 
 class HubDescriptor:
     def __init__(self, protocol):
@@ -78,6 +93,18 @@ class ADCHubProtocol(ADCProtocol):
     
     supported_features = set(["BASE", "ZLIB", "TIGR"]);
     
+    signals = set([
+      "hub-identified",
+      "get-user",
+      "user-info",
+      "user-quit",
+      "direct-connect",
+      "status",
+      "message",
+      "connection-made",
+      "connection-lost",
+    ]);
+    
     def __init__(self, **kw):
       ADCProtocol.__init__(self, **kw);
       
@@ -89,21 +116,10 @@ class ADCHubProtocol(ADCProtocol):
 
       self.pid = None;
       self.cid = None;
+      self.peer = None;
       
-      self.users = list();
-      self.users_by_sid = dict();
-    
-    def onStatus(self, status):
-      self.log.msg(str(status));
-
-    def onHubIdentified(self):
-      """
-      Called when the hub has been identified.
-      """
-      pass;
-
-    def getUser(self):
-      return None;
+      self.__users = list();
+      self.__users_by_sid = dict();
     
     def sendLogin(self, user):
       if user is None:
@@ -124,6 +140,14 @@ class ADCHubProtocol(ADCProtocol):
       };
       
       self.sendFrame(Message(Broadcast(cmd='INF', my_sid=encode(self.hub.sid)), **kw));
+
+    def connectionMade(self):
+      ADCProtocol.connectionMade(self);
+      self.emit("connection-made");
+
+    def connectionLost(self, reason):
+      ADCProtocol.connectionLost(self, reason);
+      self.emit("connection-lost", reason);
     
     def sendMessage(self, msg):
       if self.connected:
@@ -166,7 +190,7 @@ class ADCHubProtocol(ADCProtocol):
         self.cid = self.hashing.digest(self.pid);
         log.msg("Private id: " + repr(self.pid), );
         
-        self.sendLogin(self.getUser());
+        self.sendLogin(self.emit("get-user"));
         self.setState(self.context.IDENTIFY);
 
     @context(context.IDENTIFY, Info, 'INF')
@@ -175,47 +199,72 @@ class ADCHubProtocol(ADCProtocol):
         self.hub.name = NI;
         self.hub.version = VE;
         
-        self.hub.peer = self.transport.getPeer();
+        self.peer = self.transport.getPeer();
         
-        self.log.setPrefixes(self.hub.peer.host + ":" + str(self.hub.peer.port), self.hub.version);
+        self.log.setPrefixes(self.peer.host + ":" + str(self.peer.port), self.hub.version);
         
-        self.onHubIdentified();
+        self.emit("hub-identified", self.hub);
         self.setState(self.context.NORMAL);
     
     @context(context.NORMAL, Info, 'STA')
     @context.params(STR, STR)
     def identify_hub(self, frame, code, message):
-        self.onStatus(ADCStatus(code, message));
+        self.emit("status", ADCStatus(code, message));
     
     @context(context.NORMAL, Broadcast, 'INF')
-    @context.params(ID=STR, NI=STR, HN=INT, SS=INT)
-    def identify_user(self, frame, ID=None, NI=None, HN=None, SS=None, **kw):
-        user = HubUser(sid=frame.header.my_sid, nick=NI, sharesize=SS)
-        self.users.append(user);
-        self.users_by_sid[user.sid] = user;
-
+    @context.params(ID=STR, NI=STR, HN=INT, SS=INT, I4=IP4, I6=IP6)
+    def identify_user(self, frame, **kw):
+        sid = frame.header.my_sid;
+        
+        if sid in self.__users_by_sid:
+          user = self.__users_by_sid[sid];
+          user.update(**kw);
+        else:
+          user = HubUser(sid=sid, **kw)
+          self.__users.append(user);
+          self.__users_by_sid[user.sid] = user;
+        
+        self.emit("user-info", user);
+    
     @context(context.NORMAL, Broadcast, 'MSG')
     @context.params(STR)
     def hub_message(self, frame, message):
       sid = frame.header.my_sid
 
-      if sid not in self.users_by_sid:
+      if sid not in self.__users_by_sid:
         self.log.msg("no such user sid: " + sid);
         return;
       
-      self.onMessage(self.users_by_sid[sid], message);
+      self.emit("message", self.__users_by_sid[sid], message);
 
     @context(context.NORMAL, Info, 'QUI')
     @context.params(STR)
     def user_quit(self, frame, sid):
-      if sid not in self.users_by_sid:
+      if sid not in self.__users_by_sid:
         self.log.msg("no such user sid: " + sid);
         return;
+      
+      user = self.__users_by_sid[sid];
+      
+      self.emit("user-quit", user);
+      self.__users.remove(user)
+      self.__users_by_sid.pop(sid);
 
-      user = self.users_by_sid[sid];
+    @context(context.NORMAL, Direct, 'CTM')
+    def user_ctm(self, frame):
+      msid = frame.header.my_sid
+      tsid = frame.header.target_sid
+      
+      if not msid in self.__users_by_sid:
+        self.log.msg("no such user sid: " + tsid);
+        return;
 
-      self.users.remove(user)
-      self.users_by_sid.remove(sid);
+      print frame.header
+      
+      # the user to connect to
+      user = self.__users_by_sid[msid];
+      
+      self.emit("direct-connect", user);
 
         #BINF AAAB ID7CE3GLXRIH46VRI3CQESXUAKRVXKXCIF76ODN2A NIudodev SL2 SS0 SF0 HR0 HO0 VEUC\sV:0.83 SUTCP4,UDP4,ADC0,KEY0 US65536 U49086 KPSHA256/3H3DKERANVIDMWRXHDZCCVOEKBSM3LN3UXNPCBWAJK5GMH2IQZLA I4127.0.0.1 HN2
     

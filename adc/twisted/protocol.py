@@ -15,10 +15,30 @@ class ADCProtocol(LineReceiver):
         
         if self.context is None:
             raise ValueError("the static field 'context' must be set in the ADCProtocol");
+
+        if self.signals is None:
+            raise ValueError("the static field 'signals' must be set in the ADCProtocol");
         
         self.prefix = "n/a";
         self.connected = False;
         self.__state = None;
+        self.__signalhandlers = dict();
+    
+    def connect(self, handle, callback):
+        if handle not in self.signals:
+            raise ValueError("bad signal handle: " + handle);
+        
+        self.__signalhandlers[handle] = callback;
+    
+    def emit(self, handle, *args, **kw):
+        if handle not in self.signals:
+            raise ValueError("bad signal handle: " + handle);
+        
+        if not self.__signalhandlers.has_key(handle):
+            self.log.msg("no registered handles for signal: " + handle, logLevel=logging.WARN);
+            return;
+        
+        return self.__signalhandlers[handle](*args, **kw);
     
     def setState(self, state):
         """
