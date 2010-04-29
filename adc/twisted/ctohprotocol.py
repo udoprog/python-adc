@@ -2,6 +2,7 @@ from .protocol import ADCProtocol, ADCContext
 from .helpers import ADCStatus
 from ..types import *
 from ..types import encode, decode
+from ..message import *
 from ..hashing import TigerHash
 
 from twisted.python import log

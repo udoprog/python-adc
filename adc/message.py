@@ -1,100 +1,4 @@
-import base64
-
-from IPy import IP
-
-class List:
-    """
-    A simple type helpers which speicifies that a set of parameters are expected as a list.
-    """
-    def __init__(self, type):
-        self.type = type;
-
-INT = "INT";
-IP4 = "IP4";
-IP6 = "IP6";
-B32 = "B32";
-STR = "STR";
-
-FEATURE_ADD="+"
-FEATURE_REM="-"
-SEPARATOR=" "
-TYPE_SEP=":"
-EOL="\n"
-
-B_HEADER = ["B"];
-CIH_HEADER = ["C", "I", "H"];
-DE_HEADER = ["D", "E"];
-F_HEADER = ["F"];
-U_HEADER = ["U"];
-
-class Base32:
-    """
-    A read only type to indicate that the containing message should be encoded using Base32
-    """
-    def __init__(self, val, size=None):
-        self._val = val;
-        self._size = size;
-    
-    val = property(lambda self: self._val);
-    size = property(lambda self: self._size);
-    
-    def __str__(self):
-        return self.val;
-    
-    def __repr__(self):
-        return "<Base32 val=" + repr(self.val) + ">"
-
-def encode(v):
-    """
-    Encode a value, key to a specific type, always must return string or throw exception.
-    """
-    if v is None:
-        return "";
-    
-    if type(v) in [int, long, float]:
-        return str(v);
-    elif isinstance(v, IP):
-        if v.version() == 4:
-            return str(v)
-        elif v.version() == 6:
-            return str(v)
-    elif isinstance(v, basestring):
-        return v.replace(' ', "\\s").replace('\n', "\\n");
-    elif isinstance(v, Base32):
-        enc = base64.b32encode(v.val);
-        o = enc.find('=');
-        if o == -1:
-            o = len(enc);
-        return enc[:o];
-    
-    raise ValueError("cannot encode value: " + str(type(v)) + " " + repr(v));
-
-def decode(v, t, *args):
-  if v is None:
-    return None;
-
-  if t == STR:
-    return v;
-  elif t == INT:
-    return int(v);
-  elif t == B32:
-    if len(args) <= 0:
-      raise ValueError("decoding of type B32 requires extra argument: <size>");
-    
-    size = args[0];
-    
-    mod = size % 5;
-    
-    if mod == 0:
-        need = 0;
-    else:
-        need = (size + (5 - mod)) / 5 * 8 - len(v);
-    
-    return Base32(base64.b32decode(v + "=" * need, size));
-  elif t == IP4:
-    return IP(v, ipversion=4);
-  elif t == IP6:
-    return IP(v, ipversion=6);
+from . import parser
 
 class Message:
   def __init__(self, header=None, *params, **kw):
@@ -113,6 +17,10 @@ class Message:
         return Message(header, *params);
     else:
         return Message();
+
+  @classmethod
+  def parse(klass, string):
+    return klass.create(parser.parseFrame(string));
   
   def __repr__(self):
     return "<Message header=" + repr(self.header) + " params=" + repr(self.params) + ">"
@@ -121,7 +29,7 @@ class Message:
     if self.header is None:
       return "";
     
-    return SEPARATOR.join([self.header.__str__()] + self.params)
+    return parser.SEPARATOR.join([self.header.__str__()] + self.params)
   
   def get(self, a_key):
     """
@@ -134,7 +42,7 @@ class Message:
         return self.params[a_key];
     
     return map(lambda s: s[len(a_key):], filter(lambda v: v.startswith(a_key), self.params));
-  
+
   def getfirst(self, a_key):
     l = self.get(a_key);
     if len(l) == 0:
@@ -179,22 +87,22 @@ class Header:
     
     header_type = header_type[0];
     
-    if header_type in B_HEADER:
+    if header_type in parser.B_HEADER:
       return Broadcast(tree_root);
-    if header_type in CIH_HEADER:
+    if header_type in parser.CIH_HEADER:
       if header_type == 'C': return Client(tree_root);
       if header_type == 'I': return Info(tree_root);
       if header_type == 'H': return Hub(tree_root);
-    if header_type in DE_HEADER:
+    if header_type in parser.DE_HEADER:
       if header_type == 'D': return Direct(tree_root);
       if header_type == 'E': return Echo(tree_root);
-    if header_type in F_HEADER: return Feature(tree_root);
-    if header_type in U_HEADER: return UDP(tree_root);
+    if header_type in parser.F_HEADER: return Feature(tree_root);
+    if header_type in parser.U_HEADER: return UDP(tree_root);
     return None;
 
 class Broadcast(Header):
   validates = ['cmd', 'my_sid'];
-  types = B_HEADER;
+  types = parser.B_HEADER;
   
   def __init__(self, tree_root=None, **kw):
     kw['type'] = 'B';
@@ -210,17 +118,17 @@ class Broadcast(Header):
     return "<Broadcast cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + ">"
 
   def __str__(self):
-    return SEPARATOR.join([self.type + self.cmd, self.my_sid]);
+    return parser.SEPARATOR.join([self.type + self.cmd, self.my_sid]);
 
 class CIH(Header):
   validates = ['cmd'];
-  types = CIH_HEADER;
+  types = parser.CIH_HEADER;
   
   def __str__(self):
     return self.type + self.cmd;
 
 class Client(CIH):
-  types = CIH_HEADER;
+  types = parser.CIH_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'C';
@@ -230,7 +138,7 @@ class Client(CIH):
     return "<Client cmd=" + repr(self.cmd) + ">"
 
 class Info(CIH):
-  types = CIH_HEADER;
+  types = parser.CIH_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'I';
@@ -240,7 +148,7 @@ class Info(CIH):
     return "<Info cmd=" + repr(self.cmd) + ">"
 
 class Hub(CIH):
-  types = CIH_HEADER;
+  types = parser.CIH_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'H';
@@ -251,7 +159,7 @@ class Hub(CIH):
 
 class DE(Header):
   validates = ['cmd', 'my_sid', 'target_sid']
-  types = DE_HEADER;
+  types = parser.DE_HEADER;
   
   def __init__(self, tree_root=None, **kw):
     if tree_root:
@@ -264,10 +172,10 @@ class DE(Header):
     Header.__init__(self, tree_root, **kw);
   
   def __str__(self):
-    return SEPARATOR.join([self.type + self.cmd, self.my_sid, self.target_sid]);
+    return parser.SEPARATOR.join([self.type + self.cmd, self.my_sid, self.target_sid]);
 
 class Direct(DE):
-  types = DE_HEADER;
+  types = parser.DE_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'D';
@@ -277,7 +185,7 @@ class Direct(DE):
     return "<Direct cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + " target_sid=" + repr(self.target_sid) + ">"
 
 class Echo(DE):
-  types = DE_HEADER;
+  types = parser.DE_HEADER;
   
   def __init__(self, *args, **kw):
     kw['type'] = 'E';
@@ -288,7 +196,7 @@ class Echo(DE):
 
 class Feature(Header):
   validates = ['cmd', 'my_sid']
-  types = F_HEADER;
+  types = parser.F_HEADER;
   
   def __init__(self, tree_root=None, **kw):
     if tree_root:
@@ -297,9 +205,9 @@ class Feature(Header):
         self.rem = list();
         
         for t, f in tree_root.get("feature_list"):
-            if t == FEATURE_ADD:
+            if t == parser.FEATURE_ADD:
                 self.add.append(f);
-            elif t == FEATURE_REM:
+            elif t == parser.FEATURE_REM:
                 self.rem.append(f);
     else:
         kw['type'] = 'F';
@@ -319,12 +227,12 @@ class Feature(Header):
     return "<Feature cmd=" + repr(self.cmd) + " my_sid=" + repr(self.my_sid) + " features=" + repr(self.features) + ">"
   
   def __str__(self):
-    features = [FEATURE_ADD + feat for feat in self.add] + [FEATURE_REM + feat for feat in self.rem];
-    return SEPARATOR.join([self.type + self.cmd, self.my_sid] + features);
+    features = [parser.FEATURE_ADD + feat for feat in self.add] + [parser.FEATURE_REM + feat for feat in self.rem];
+    return parser.SEPARATOR.join([self.type + self.cmd, self.my_sid] + features);
 
 class UDP(Header):
   validates = ['my_cid', 'type'];
-  types = U_HEADER;
+  types = parser.U_HEADER;
   
   def __init__(self, tree_root=None, **kw):
     if tree_root:
@@ -338,7 +246,6 @@ class UDP(Header):
     return "<UDP cmd=" + repr(self.cmd) + " my_cid=" + repr(self.my_cid) + ">"
   
   def __str__(self):
-    return SEPARATOR.join([self.type + self.cmd, self.my_cid]);
+    return parser.SEPARATOR.join([self.type + self.cmd, self.my_cid]);
 
-__all__ = [ "Message", "Client", "Info", "Hub", "Direct", "Echo", "Feature", "UDP", "Broadcast",
-            "INT", "IP4", "IP6", "B32", "STR", "IP", "Base32", "List"];
+__all__ = [ "Message", "Client", "Info", "Hub", "Direct", "Echo", "Feature", "UDP", "Broadcast"];
